@@ -159,8 +159,8 @@ try {
   const insertTherapist = db.prepare('INSERT INTO therapists (name, phone, gender, is_absent, active) VALUES (?, ?, ?, 0, 1)');
   const updateTherapist = db.prepare('UPDATE therapists SET gender = ?, active = 1 WHERE UPPER(name) = ?');
 
-  // Deactivate old placeholder therapists like "Therapist 1".."Therapist 7"
-  db.exec("UPDATE therapists SET active = 0 WHERE name LIKE 'Therapist %'");
+  // Deactivate old placeholder therapists like "Therapist 1".."Therapist 7" and any old tests
+  db.exec("UPDATE therapists SET active = 0 WHERE name LIKE 'Therapist %' OR name LIKE '%chynita%'");
 
   for (const name of maleTherapists) {
     const row = findTherapist.get(name);
