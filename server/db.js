@@ -118,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_paid_at ON payments(paid_at);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 `);
 
-// Migrations for discounts, reminders, room availment & therapist status/gender
+// Migrations for discounts, reminders, room availment, reminders tracking & therapist status/gender
 try {
   const paymentCols = db.prepare("PRAGMA table_info(payments)").all().map((c) => c.name);
   if (!paymentCols.includes('discount_type')) {
@@ -131,6 +131,12 @@ try {
   const apptCols = db.prepare("PRAGMA table_info(appointments)").all().map((c) => c.name);
   if (!apptCols.includes('reminded_at')) {
     db.exec("ALTER TABLE appointments ADD COLUMN reminded_at TEXT DEFAULT NULL");
+  }
+  if (!apptCols.includes('reminder_1h_sent')) {
+    db.exec("ALTER TABLE appointments ADD COLUMN reminder_1h_sent INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!apptCols.includes('reminder_30m_sent')) {
+    db.exec("ALTER TABLE appointments ADD COLUMN reminder_30m_sent INTEGER NOT NULL DEFAULT 0");
   }
   if (!apptCols.includes('has_room')) {
     db.exec("ALTER TABLE appointments ADD COLUMN has_room INTEGER NOT NULL DEFAULT 0");
@@ -219,15 +225,14 @@ try {
   console.error('Error synchronizing services:', e);
 }
 
-// Ensure default users exist
+// Ensure only Business Owner exists as default user (remove System Administrator placeholder)
 try {
+  db.exec("DELETE FROM users WHERE email LIKE '%admin%' OR role = 'admin'");
   const existingUsers = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
   if (existingUsers === 0) {
     const insertUser = db.prepare(`INSERT INTO users (full_name,email,password_hash,role,therapist_id) VALUES (?,?,?,?,?)`);
     const hash = (password) => bcrypt.hashSync(password, 12);
     insertUser.run('Business Owner', 'owner@wjwellness.com', hash('Owner@123'), 'owner', null);
-    insertUser.run('System Administrator', 'admin@wjwellness.com', hash('Admin@123'), 'admin', null);
-    insertUser.run('Front Desk Receptionist', 'reception@wjwellness.com', hash('Reception@123'), 'receptionist', null);
   }
 } catch (e) {
   console.error('Error synchronizing users:', e);

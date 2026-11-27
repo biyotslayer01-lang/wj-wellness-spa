@@ -385,8 +385,8 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
                         </div>
                         {item.reminded_at && (
                           <div style={{ marginTop: '3px' }}>
-                            <span style={{ fontSize: '0.76rem', background: '#dceee2', color: '#1a5035', padding: '2px 7px', borderRadius: '6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <Bell size={11} /> Called ({item.reminded_at.slice(11, 16)})
+                            <span style={{ fontSize: '0.76rem', background: '#fcedef', color: '#881c2d', padding: '2px 7px', borderRadius: '6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Bell size={11} /> Reminded ({item.reminded_at.slice(11, 16)})
                             </span>
                           </div>
                         )}
@@ -449,11 +449,11 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
                                 className="mini-action"
                                 onClick={() => remindCustomer(item)}
                                 disabled={remindingId === item.id}
-                                title="Sila Na Po / Send Turn Reminder via Gmail & SMS"
+                                title="Send Advance Reminder Notification (SMS / Email)"
                                 style={{
-                                  background: item.reminded_at ? '#edf6f0' : '#f0f7f2',
-                                  color: '#1a5438',
-                                  borderColor: '#b3d4be',
+                                  background: item.reminded_at ? '#fcedef' : 'rgba(136, 28, 45, 0.08)',
+                                  color: '#881c2d',
+                                  borderColor: '#ebcad0',
                                   fontWeight: 700,
                                   display: 'inline-flex',
                                   alignItems: 'center',
@@ -463,7 +463,7 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
                                 }}
                               >
                                 <Bell size={13} />
-                                <span>{remindingId === item.id ? '...' : 'Sila na'}</span>
+                                <span>{remindingId === item.id ? '...' : 'Remind'}</span>
                               </button>
                             )}
                             {item.status === 'pending' && (

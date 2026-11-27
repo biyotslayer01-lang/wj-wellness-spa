@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserRoundPlus, ShieldCheck, Users, LockKeyhole } from 'lucide-react';
+import { UserRoundPlus, ShieldCheck, Users, LockKeyhole, Trash2 } from 'lucide-react';
 import { PageHeading, LoadingLine, InlineError, Modal, Field, ROLE_LABELS, useApiData } from '../components/Common';
 import { api, dateLabel } from '../api';
 
@@ -36,6 +36,17 @@ export function UsersPage({ user, refreshKey, onChanged, notify }) {
         body: JSON.stringify({ active: !account.active })
       });
       notify(`Account ${account.active ? 'deactivated' : 'activated'}.`);
+      onChanged();
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  };
+
+  const removeUser = async (account) => {
+    if (!window.confirm(`Are you sure you want to permanently delete ${account.full_name}?`)) return;
+    try {
+      await api(`/api/users/${account.id}`, { method: 'DELETE' });
+      notify(`Account ${account.full_name} removed.`);
       onChanged();
     } catch (err) {
       notify(err.message, 'error');
@@ -103,12 +114,22 @@ export function UsersPage({ user, refreshKey, onChanged, notify }) {
                     <td><span className="cell-muted">{dateLabel((account.created_at || '').slice(0, 10))}</span></td>
                     <td>
                       {account.role !== 'owner' && account.id !== user.id ? (
-                        <button
-                          className={`text-button ${account.active ? 'danger-text' : ''}`}
-                          onClick={() => toggle(account)}
-                        >
-                          {account.active ? 'Deactivate' : 'Activate'}
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button
+                            className={`text-button ${account.active ? 'danger-text' : ''}`}
+                            onClick={() => toggle(account)}
+                          >
+                            {account.active ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            className="text-button danger-text"
+                            onClick={() => removeUser(account)}
+                            title="Delete user"
+                            style={{ color: '#c62828' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       ) : (
                         <span className="cell-muted">Protected</span>
                       )}

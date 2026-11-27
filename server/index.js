@@ -555,9 +555,10 @@ app.patch('/api/appointments/:id', staff, (req, res) => {
   res.json({ message: 'Appointment updated successfully.' });
 });
 
-// Customer Turn Reminder ("Sila Na Po" / Queue Call)
+// Send Appointment Reminder Notification (1 Hour & 30 Mins Before Queue / Schedule)
 app.post('/api/appointments/:id/remind', staff, async (req, res) => {
   const id = Number(req.params.id);
+  const minutesBefore = req.body?.minutes === 30 ? 30 : 60;
   const appt = db.prepare(`SELECT a.*, c.full_name AS customer_name, c.email AS customer_email, c.phone AS customer_phone,
       s.name AS service_name, t.name AS therapist_name
     FROM appointments a
@@ -568,34 +569,91 @@ app.post('/api/appointments/:id/remind', staff, async (req, res) => {
 
   if (!appt) return res.status(404).json({ error: 'Appointment not found.' });
 
-  // Update reminded_at timestamp
-  db.prepare(`UPDATE appointments SET reminded_at = datetime('now','localtime') WHERE id = ?`).run(id);
+  const flagColumn = minutesBefore === 30 ? 'reminder_30m_sent' : 'reminder_1h_sent';
+  db.prepare(`UPDATE appointments SET reminded_at = datetime('now','localtime'), ${flagColumn} = 1 WHERE id = ?`).run(id);
 
   let emailSent = false;
   if (appt.customer_email) {
-    const mailResult = await mailer.sendCustomerTurnReminderEmail({
+    const mailResult = await mailer.sendAdvanceReminderEmail({
       to: appt.customer_email,
       customerName: appt.customer_name,
       serviceName: appt.service_name,
-      therapistName: appt.therapist_name
+      therapistName: appt.therapist_name,
+      time: appt.start_time,
+      minutesBefore
     });
     emailSent = mailResult.success;
   }
 
-  audit(req.user.id, 'REMIND', 'appointment', id, `Sent turn reminder to ${appt.customer_name}`);
+  const label = minutesBefore === 60 ? '1 hour' : '30 mins';
+  audit(req.user.id, 'REMIND', 'appointment', id, `Sent ${label} advance reminder to ${appt.customer_name}`);
 
-  const smsText = `Hi ${appt.customer_name}! Handa na po ang inyong therapist (${appt.therapist_name || 'Staff'}) para sa inyong ${appt.service_name} sa 2 Hands Massage & Wellness. Maaari na po kayong magtungo sa reception area. Salamat po!`;
+  const smsText = `Hi ${appt.customer_name}! Paalala mula sa WJ Wellness Spa: Ang inyong ${appt.service_name} session kasama si ${appt.therapist_name || 'Staff'} ay nakatakda ngayong ${appt.start_time} (sa loob ng ${label}). Maaari na po kayong maghanda. Salamat po!`;
 
   res.json({
     message: emailSent
-      ? `Notification sent to ${appt.customer_name} via Gmail!`
-      : `Turn reminder recorded for ${appt.customer_name}.`,
+      ? `Advance reminder (${label}) sent to ${appt.customer_name} via Gmail!`
+      : `Advance reminder (${label}) recorded for ${appt.customer_name}.`,
     customer_name: appt.customer_name,
     customer_phone: appt.customer_phone,
     customer_email: appt.customer_email,
     sms_text: smsText
   });
 });
+
+// Automatic background reminder job: checks appointments every 2 minutes
+setInterval(() => {
+  try {
+    const today = todayLocal();
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const upcoming = db.prepare(`SELECT a.*, c.full_name AS customer_name, c.email AS customer_email,
+        s.name AS service_name, t.name AS therapist_name
+      FROM appointments a
+      JOIN customers c ON c.id = a.customer_id
+      JOIN services s ON s.id = a.service_id
+      LEFT JOIN therapists t ON t.id = a.therapist_id
+      WHERE a.appointment_date = ? AND a.status IN ('confirmed', 'pending')
+        AND (a.reminder_1h_sent = 0 OR a.reminder_30m_sent = 0)`).all(today);
+
+    for (const appt of upcoming) {
+      if (!appt.customer_email) continue;
+      const apptMinutes = parseTimeToMinutes(appt.start_time);
+      const diff = apptMinutes - nowMinutes;
+
+      // 1-hour reminder window (between 50 and 65 mins before start time)
+      if (diff > 50 && diff <= 65 && !appt.reminder_1h_sent) {
+        db.prepare("UPDATE appointments SET reminder_1h_sent = 1, reminded_at = datetime('now','localtime') WHERE id = ?").run(appt.id);
+        mailer.sendAdvanceReminderEmail({
+          to: appt.customer_email,
+          customerName: appt.customer_name,
+          serviceName: appt.service_name,
+          therapistName: appt.therapist_name,
+          time: appt.start_time,
+          minutesBefore: 60
+        }).catch((e) => console.error('[auto-remind 1h error]:', e.message));
+        console.log(`[auto-remind] Sent 1-hour reminder for appt #${appt.id} to ${appt.customer_email}`);
+      }
+
+      // 30-min reminder window (between 20 and 35 mins before start time)
+      if (diff > 20 && diff <= 35 && !appt.reminder_30m_sent) {
+        db.prepare("UPDATE appointments SET reminder_30m_sent = 1, reminded_at = datetime('now','localtime') WHERE id = ?").run(appt.id);
+        mailer.sendAdvanceReminderEmail({
+          to: appt.customer_email,
+          customerName: appt.customer_name,
+          serviceName: appt.service_name,
+          therapistName: appt.therapist_name,
+          time: appt.start_time,
+          minutesBefore: 30
+        }).catch((e) => console.error('[auto-remind 30m error]:', e.message));
+        console.log(`[auto-remind] Sent 30-min reminder for appt #${appt.id} to ${appt.customer_email}`);
+      }
+    }
+  } catch (err) {
+    console.error('[auto-remind interval error]:', err.message);
+  }
+}, 2 * 60 * 1000);
 
 // Payments and transaction history. The system records payments; it does not process online transfers.
 app.get('/api/transactions', staff, (req, res) => {
@@ -784,6 +842,18 @@ app.patch('/api/users/:id', managers, (req, res) => {
   if (!result.changes) return res.status(404).json({ error: 'User not found or owner account cannot be changed here.' });
   audit(req.user.id, active ? 'ACTIVATE' : 'DEACTIVATE', 'user', id, 'Account status changed');
   res.json({ message: `User account ${active ? 'activated' : 'deactivated'} successfully.` });
+});
+
+app.delete('/api/users/:id', managers, (req, res) => {
+  const id = Number(req.params.id);
+  if (id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own account.' });
+  const target = db.prepare('SELECT role, full_name FROM users WHERE id = ?').get(id);
+  if (!target) return res.status(404).json({ error: 'User not found.' });
+  if (target.role === 'owner') return res.status(400).json({ error: 'Owner account cannot be deleted.' });
+
+  db.prepare('DELETE FROM users WHERE id = ?').run(id);
+  audit(req.user.id, 'DELETE', 'user', id, `Deleted user ${target.full_name}`);
+  res.json({ message: `User account ${target.full_name} deleted successfully.` });
 });
 
 app.get('/api/audit-logs', managers, (_req, res) => {

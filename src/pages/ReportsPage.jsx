@@ -86,8 +86,6 @@ export function ReportsPage({ refreshKey }) {
       <div className="stats-grid report-stats">
         <StatCard label="Total sales" value={loading ? '—' : money(data?.summary?.total_sales)} detail={`${titleCase(period)} recorded revenue`} icon={Banknote} tone="green" />
         <StatCard label="Transactions" value={loading ? '—' : data?.summary?.transaction_count ?? 0} detail="Payments in this period" icon={ReceiptIcon} tone="blue" />
-        <StatCard label="Inventory items" value={loading ? '—' : data?.inventorySummary?.item_count ?? 0} detail="Active items tracked" icon={Package} tone="gold" />
-        <StatCard label="Low-stock items" value={loading ? '—' : data?.inventorySummary?.low_stock_count ?? 0} detail="Needs replenishment" icon={AlertTriangle} tone="rose" />
       </div>
 
       <section className="panel report-table-panel">

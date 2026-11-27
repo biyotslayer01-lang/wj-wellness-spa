@@ -136,11 +136,13 @@ async function sendBookingConfirmedEmail({ to, customerName, serviceName, therap
 }
 
 /**
- * 2. Customer Turn Reminder ("Sila Na Po" / Queue Alert)
+ * 2. Advance Appointment Reminder (1 Hour and 30 Mins Before Session)
  */
-async function sendCustomerTurnReminderEmail({ to, customerName, serviceName, therapistName }) {
-  const subject = `🔔 Kayo Na Po! Handa na ang inyong therapist sa 2 Hands Wellness`;
-  const text = `Magandang araw po, ${customerName}! Handa na po ang inyong therapist (${therapistName || 'Staff'}) para sa inyong ${serviceName}. Maaari na po kayong magtungo sa reception / treatment room. Salamat po!`;
+async function sendAdvanceReminderEmail({ to, customerName, serviceName, therapistName, time, minutesBefore = 60 }) {
+  const isOneHour = minutesBefore === 60;
+  const timeLabel = isOneHour ? '1 oras' : '30 minuto';
+  const subject = `⏰ Paalala: May Appointment Kayo sa WJ Wellness Spa sa loob ng ${timeLabel} (${time})`;
+  const text = `Magandang araw po, ${customerName}! Paalala po mula sa WJ Wellness Spa na ang inyong appointment para sa ${serviceName} ay nakatakda ngayong ${time} (sa loob ng ${timeLabel}). Therapist: ${therapistName || 'Assigned Therapist'}. Maaari na po kayong maghanda at magtungo sa JJMB Building, Brgy. Gaya-gaya, SJDM Bulacan. Salamat po!`;
 
   const html = `
 <!DOCTYPE html>
@@ -148,44 +150,45 @@ async function sendCustomerTurnReminderEmail({ to, customerName, serviceName, th
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f4f7f4; margin: 0; padding: 20px; color: #1e3328; }
-    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 2px solid #236544; box-shadow: 0 6px 24px rgba(35,101,68,0.12); }
-    .header { background: #14382e; padding: 26px 20px; text-align: center; color: #ffffff; }
-    .badge { display: inline-block; background: #2ba469; color: #ffffff; font-size: 13px; font-weight: 800; padding: 6px 16px; border-radius: 20px; letter-spacing: 0.05em; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fdf6f7; margin: 0; padding: 20px; color: #2d1116; }
+    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 2px solid #881c2d; box-shadow: 0 6px 24px rgba(136,28,45,0.12); }
+    .header { background: #570c19; padding: 26px 20px; text-align: center; color: #ffffff; }
+    .badge { display: inline-block; background: #881c2d; color: #ffffff; font-size: 13px; font-weight: 800; padding: 6px 16px; border-radius: 20px; letter-spacing: 0.05em; border: 1px solid rgba(255,255,255,0.3); }
     .content { padding: 30px 24px; text-align: center; }
-    .bell { font-size: 42px; margin-bottom: 8px; }
-    .title { font-size: 22px; font-weight: 800; color: #14382e; margin: 0 0 10px; }
-    .msg { font-size: 15px; color: #3d5546; line-height: 1.6; margin: 0 auto 20px; max-width: 460px; }
-    .details { background: #f2f8f4; border: 1px solid #d0e4d6; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; display: inline-block; width: 85%; }
-    .details div { font-size: 14px; margin-bottom: 6px; color: #223f2f; }
+    .clock { font-size: 42px; margin-bottom: 8px; }
+    .title { font-size: 22px; font-weight: 800; color: #570c19; margin: 0 0 10px; }
+    .msg { font-size: 15px; color: #4a282e; line-height: 1.6; margin: 0 auto 20px; max-width: 480px; }
+    .details { background: #fdf5f6; border: 1px solid #edd1d5; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; display: inline-block; width: 85%; }
+    .details div { font-size: 14px; margin-bottom: 6px; color: #3b151c; }
     .details div:last-child { margin-bottom: 0; }
-    .footer { background: #f9fbf9; padding: 18px 20px; text-align: center; font-size: 12px; color: #788d80; border-top: 1px solid #eef3ef; }
+    .footer { background: #faf4f5; padding: 18px 20px; text-align: center; font-size: 12px; color: #785a60; border-top: 1px solid #f2e1e3; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <div class="badge">🔔 YOUR TURN IS READY / SILA NA PO</div>
+      <div class="badge">⏰ APPOINTMENT REMINDER (${timeLabel.toUpperCase()} BEFORE SESSION)</div>
     </div>
     <div class="content">
-      <div class="bell">💆‍♀️✨</div>
-      <h2 class="title">Handa na po ang inyong Therapist!</h2>
+      <div class="clock">💆‍♂️✨</div>
+      <h2 class="title">Paparating na ang inyong Appointment!</h2>
       <p class="msg">
-        Magandang araw po, <strong>${customerName}</strong>! Inihanda na po ang inyong sanitized massage suite at warm herbal foot bath. Maaari na po kayong magtungo sa aming reception area.
+        Magandang araw po, <strong>${customerName}</strong>! Ipinapaalala po namin na ang inyong schedule ay magsisimula sa ganap na <strong>${time}</strong> (humigit-kumulang <strong>${timeLabel}</strong> mula ngayon).
       </p>
 
       <div class="details">
         <div>💆 <strong>Serbisyo:</strong> ${serviceName}</div>
-        <div>👤 <strong>Therapist:</strong> ${therapistName || 'Assigned Professional Therapist'}</div>
-        <div>📍 <strong>Branch:</strong> Quirino Highway, San Jose del Monte, Bulacan</div>
+        <div>👤 <strong>Therapist:</strong> ${therapistName || 'Assigned Therapist'}</div>
+        <div>⏰ <strong>Oras ng Session:</strong> ${time}</div>
+        <div>📍 <strong>Lokasyon:</strong> 2nd Floor JJMB Building, Brgy. Gaya-gaya, SJDM Bulacan</div>
       </div>
 
-      <p style="font-size: 13px; color: #627b6c; margin: 0;">
-        Lalapitan din po kayo ng aming staff sa waiting lounge. Nawa'y maging lubos ang inyong pagpapahinga!
+      <p style="font-size: 13px; color: #7a5057; margin: 0;">
+        Inaanyayahan po namin kayong pumunta nang bahagyang mas maaga (5-10 minuto) para sa maayos na pag-check in. Kita-kits po sa WJ Wellness Spa!
       </p>
     </div>
     <div class="footer">
-      2 Hands Massage & Wellness · San Jose del Monte Branch
+      WJ Wellness Spa · JJMB Building, Brgy. Gaya-gaya, San Jose del Monte Bulacan · 📞 0935-8548-741
     </div>
   </div>
 </body>
@@ -198,5 +201,5 @@ async function sendCustomerTurnReminderEmail({ to, customerName, serviceName, th
 module.exports = {
   sendMail,
   sendBookingConfirmedEmail,
-  sendCustomerTurnReminderEmail
+  sendAdvanceReminderEmail
 };
