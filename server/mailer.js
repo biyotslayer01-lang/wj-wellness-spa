@@ -138,11 +138,35 @@ async function sendBookingConfirmedEmail({ to, customerName, serviceName, therap
 /**
  * 2. Advance Appointment Reminder (1 Hour and 30 Mins Before Session)
  */
-async function sendAdvanceReminderEmail({ to, customerName, serviceName, therapistName, time, minutesBefore = 60 }) {
+async function sendAdvanceReminderEmail({
+  to,
+  customerName,
+  serviceName,
+  therapistName,
+  date,
+  time,
+  arriveByTime,
+  totalAmount = 0,
+  hasRoom = false,
+  minutesBefore = 60
+}) {
   const isOneHour = minutesBefore === 60;
   const timeLabel = isOneHour ? '1 oras' : '30 minuto';
-  const subject = `⏰ Paalala: May Appointment Kayo sa WJ Wellness Spa sa loob ng ${timeLabel} (${time})`;
-  const text = `Magandang araw po, ${customerName}! Paalala po mula sa WJ Wellness Spa na ang inyong appointment para sa ${serviceName} ay nakatakda ngayong ${time} (sa loob ng ${timeLabel}). Therapist: ${therapistName || 'Assigned Therapist'}. Maaari na po kayong maghanda at magtungo sa JJMB Building, Brgy. Gaya-gaya, SJDM Bulacan. Salamat po!`;
+  const formattedAmount = `₱${Number(totalAmount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const subject = `⏰ PAALALA: May Appointment Kayo sa WJ Wellness Spa sa loob ng ${timeLabel} (${time})`;
+  
+  const text = `Magandang araw po, ${customerName}!
+
+Paalala po mula sa WJ Wellness Spa para sa inyong appointment ngayong araw:
+- Petsa: ${date || 'Ngayong Araw'}
+- Oras ng Session: ${time}
+- Oras na Dapat Andito Na Kayo: ${arriveByTime || time} (5-10 minuto bago ang session)
+- Serbisyo: ${serviceName} ${hasRoom ? '(May Private Room)' : ''}
+- Assigned Therapist: ${therapistName || 'Available Therapist'}
+- Halagang Babayaran (Total Bill): ${formattedAmount}
+- Lokasyon: 2nd Floor JJMB Building, Brgy. Gaya-gaya, San Jose del Monte, Bulacan (📞 0935-8548-741)
+
+Inaanyayahan po namin kayong pumunta sa itinakdang oras para sa agarang relaxation. Salamat po!`;
 
   const html = `
 <!DOCTYPE html>
@@ -151,44 +175,81 @@ async function sendAdvanceReminderEmail({ to, customerName, serviceName, therapi
   <meta charset="utf-8">
   <style>
     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fdf6f7; margin: 0; padding: 20px; color: #2d1116; }
-    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 2px solid #881c2d; box-shadow: 0 6px 24px rgba(136,28,45,0.12); }
-    .header { background: #570c19; padding: 26px 20px; text-align: center; color: #ffffff; }
-    .badge { display: inline-block; background: #881c2d; color: #ffffff; font-size: 13px; font-weight: 800; padding: 6px 16px; border-radius: 20px; letter-spacing: 0.05em; border: 1px solid rgba(255,255,255,0.3); }
+    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 2px solid #881c2d; box-shadow: 0 8px 28px rgba(136,28,45,0.14); }
+    .header { background: linear-gradient(135deg, #881c2d 0%, #570c19 100%); padding: 28px 20px; text-align: center; color: #ffffff; }
+    .header h1 { margin: 8px 0 0; font-size: 22px; font-weight: 800; letter-spacing: 0.04em; }
+    .header p { margin: 4px 0 0; font-size: 13px; color: #ffd6dc; text-transform: uppercase; letter-spacing: 0.08em; }
+    .badge { display: inline-block; background: rgba(255,255,255,0.2); color: #ffffff; font-size: 12px; font-weight: 800; padding: 5px 14px; border-radius: 20px; letter-spacing: 0.05em; border: 1px solid rgba(255,255,255,0.4); margin-bottom: 6px; }
     .content { padding: 30px 24px; text-align: center; }
-    .clock { font-size: 42px; margin-bottom: 8px; }
-    .title { font-size: 22px; font-weight: 800; color: #570c19; margin: 0 0 10px; }
+    .clock-icon { font-size: 40px; margin-bottom: 6px; }
+    .title { font-size: 21px; font-weight: 800; color: #570c19; margin: 0 0 10px; }
     .msg { font-size: 15px; color: #4a282e; line-height: 1.6; margin: 0 auto 20px; max-width: 480px; }
-    .details { background: #fdf5f6; border: 1px solid #edd1d5; border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; display: inline-block; width: 85%; }
-    .details div { font-size: 14px; margin-bottom: 6px; color: #3b151c; }
-    .details div:last-child { margin-bottom: 0; }
-    .footer { background: #faf4f5; padding: 18px 20px; text-align: center; font-size: 12px; color: #785a60; border-top: 1px solid #f2e1e3; }
+    
+    .alert-box { background: #fff3f5; border: 2px dashed #e89da9; border-radius: 12px; padding: 14px; margin-bottom: 20px; text-align: center; }
+    .alert-box strong { font-size: 16px; color: #881c2d; display: block; }
+    .alert-box span { font-size: 13px; color: #692d37; }
+
+    .details-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; text-align: left; background: #fffdfd; border: 1px solid #ebd9dc; border-radius: 12px; overflow: hidden; }
+    .details-table td { padding: 12px 16px; border-bottom: 1px solid #f5eaec; font-size: 14px; }
+    .details-table tr:last-child td { border-bottom: none; }
+    .details-table td.label { color: #7a5057; font-weight: 600; width: 40%; }
+    .details-table td.value { color: #2d1116; font-weight: 700; }
+    .price-highlight { color: #881c2d; font-size: 17px; font-weight: 900; }
+
+    .footer { background: #faf4f5; padding: 18px 20px; text-align: center; font-size: 12px; color: #785a60; border-top: 1px solid #f2e1e3; line-height: 1.6; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <div class="badge">⏰ APPOINTMENT REMINDER (${timeLabel.toUpperCase()} BEFORE SESSION)</div>
+      <div class="badge">⏰ APPOINTMENT REMINDER (${timeLabel.toUpperCase()} NALANG)</div>
+      <h1>WJ WELLNESS SPA</h1>
+      <p>JJMB Building, Brgy. Gaya-gaya, SJDM Bulacan</p>
     </div>
     <div class="content">
-      <div class="clock">💆‍♂️✨</div>
-      <h2 class="title">Paparating na ang inyong Appointment!</h2>
+      <div class="clock-icon">💆‍♂️✨</div>
+      <h2 class="title">Handa na po ang inyong Iskedyul!</h2>
       <p class="msg">
-        Magandang araw po, <strong>${customerName}</strong>! Ipinapaalala po namin na ang inyong schedule ay magsisimula sa ganap na <strong>${time}</strong> (humigit-kumulang <strong>${timeLabel}</strong> mula ngayon).
+        Magandang araw po, <strong>${customerName}</strong>! Ipinapaalala po namin ang inyong spa reservation sa WJ Wellness Spa. Narito po ang buong detalye ng inyong appointment:
       </p>
 
-      <div class="details">
-        <div>💆 <strong>Serbisyo:</strong> ${serviceName}</div>
-        <div>👤 <strong>Therapist:</strong> ${therapistName || 'Assigned Therapist'}</div>
-        <div>⏰ <strong>Oras ng Session:</strong> ${time}</div>
-        <div>📍 <strong>Lokasyon:</strong> 2nd Floor JJMB Building, Brgy. Gaya-gaya, SJDM Bulacan</div>
+      <!-- ORAS NA DAPAT ANDON NA SILA -->
+      <div class="alert-box">
+        <strong>📍 Oras na Dapat Nandoon Na Kayo: ${arriveByTime || time}</strong>
+        <span>(Magtungo po 10-15 minuto bago ang session para sa maayos na pag-check in)</span>
       </div>
 
-      <p style="font-size: 13px; color: #7a5057; margin: 0;">
-        Inaanyayahan po namin kayong pumunta nang bahagyang mas maaga (5-10 minuto) para sa maayos na pag-check in. Kita-kits po sa WJ Wellness Spa!
+      <table class="details-table">
+        <tr>
+          <td class="label">📅 Petsa ng Appointment</td>
+          <td class="value">${date || 'Ngayong Araw'}</td>
+        </tr>
+        <tr>
+          <td class="label">⏰ Oras ng Session</td>
+          <td class="value">${time}</td>
+        </tr>
+        <tr>
+          <td class="label">💆 Serbisyo / Package</td>
+          <td class="value">${serviceName} ${hasRoom ? '<span style="color:#881c2d;">(+Private Room)</span>' : ''}</td>
+        </tr>
+        <tr>
+          <td class="label">👤 Assigned Therapist</td>
+          <td class="value">${therapistName || 'Available On-Duty Therapist'}</td>
+        </tr>
+        <tr>
+          <td class="label">💰 Halagang Babayaran (Total Bill)</td>
+          <td class="value price-highlight">${formattedAmount}</td>
+        </tr>
+      </table>
+
+      <p style="font-size: 13px; color: #7a5057; margin: 0 0 10px;">
+        Maaaring magbayad sa reception area gamit ang <strong>Cash, GCash, o Maya</strong> pagdating sa branch.
       </p>
     </div>
     <div class="footer">
-      WJ Wellness Spa · JJMB Building, Brgy. Gaya-gaya, San Jose del Monte Bulacan · 📞 0935-8548-741
+      <strong>WJ Wellness Spa</strong><br>
+      📍 2nd Floor JJMB Building, Brgy. Gaya-gaya, San Jose del Monte, Bulacan<br>
+      📞 Hotline: <a href="tel:09358548741" style="color: #881c2d; font-weight: 700; text-decoration: none;">0935-8548-741</a>
     </div>
   </div>
 </body>

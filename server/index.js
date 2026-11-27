@@ -560,7 +560,7 @@ app.post('/api/appointments/:id/remind', staff, async (req, res) => {
   const id = Number(req.params.id);
   const minutesBefore = req.body?.minutes === 30 ? 30 : 60;
   const appt = db.prepare(`SELECT a.*, c.full_name AS customer_name, c.email AS customer_email, c.phone AS customer_phone,
-      s.name AS service_name, t.name AS therapist_name
+      s.name AS service_name, s.price AS service_price, t.name AS therapist_name
     FROM appointments a
     JOIN customers c ON c.id = a.customer_id
     JOIN services s ON s.id = a.service_id
@@ -569,34 +569,50 @@ app.post('/api/appointments/:id/remind', staff, async (req, res) => {
 
   if (!appt) return res.status(404).json({ error: 'Appointment not found.' });
 
+  const totalAmount = Number(appt.service_price || 0) + Number(appt.room_fee || 0);
+
+  // Calculate arrive-by time (10 minutes before start time)
+  const [h, m] = (appt.start_time || '14:00').split(':').map(Number);
+  let arriveMins = (h * 60 + m) - 10;
+  if (arriveMins < 0) arriveMins += 24 * 60;
+  const arriveByTime = `${String(Math.floor(arriveMins / 60) % 24).padStart(2, '0')}:${String(arriveMins % 60).padStart(2, '0')}`;
+
   const flagColumn = minutesBefore === 30 ? 'reminder_30m_sent' : 'reminder_1h_sent';
   db.prepare(`UPDATE appointments SET reminded_at = datetime('now','localtime'), ${flagColumn} = 1 WHERE id = ?`).run(id);
 
   let emailSent = false;
+  let emailError = null;
   if (appt.customer_email) {
     const mailResult = await mailer.sendAdvanceReminderEmail({
       to: appt.customer_email,
       customerName: appt.customer_name,
       serviceName: appt.service_name,
       therapistName: appt.therapist_name,
+      date: appt.appointment_date,
       time: appt.start_time,
+      arriveByTime,
+      totalAmount,
+      hasRoom: Boolean(appt.has_room),
       minutesBefore
     });
     emailSent = mailResult.success;
+    emailError = mailResult.error || null;
   }
 
   const label = minutesBefore === 60 ? '1 hour' : '30 mins';
   audit(req.user.id, 'REMIND', 'appointment', id, `Sent ${label} advance reminder to ${appt.customer_name}`);
 
-  const smsText = `Hi ${appt.customer_name}! Paalala mula sa WJ Wellness Spa: Ang inyong ${appt.service_name} session kasama si ${appt.therapist_name || 'Staff'} ay nakatakda ngayong ${appt.start_time} (sa loob ng ${label}). Maaari na po kayong maghanda. Salamat po!`;
+  const smsText = `Hi ${appt.customer_name}! Paalala mula sa WJ Wellness Spa: May appointment kayo ngayong ${appt.appointment_date} sa ganap na ${appt.start_time}. Oras na dapat andon na: ${arriveByTime}. Serbisyo: ${appt.service_name} (Total: ₱${totalAmount}). Therapist: ${appt.therapist_name || 'Staff'}. Kita-kits sa JJMB Bldg Gaya-gaya!`;
 
   res.json({
     message: emailSent
-      ? `Advance reminder (${label}) sent to ${appt.customer_name} via Gmail!`
-      : `Advance reminder (${label}) recorded for ${appt.customer_name}.`,
+      ? `Advance reminder sent to ${appt.customer_email}!`
+      : (appt.customer_email ? `Reminder queued for ${appt.customer_email}` : `Reminder logged for ${appt.customer_name} (no email provided).`),
     customer_name: appt.customer_name,
     customer_phone: appt.customer_phone,
     customer_email: appt.customer_email,
+    arrive_by_time: arriveByTime,
+    total_amount: totalAmount,
     sms_text: smsText
   });
 });
@@ -609,7 +625,7 @@ setInterval(() => {
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
     const upcoming = db.prepare(`SELECT a.*, c.full_name AS customer_name, c.email AS customer_email,
-        s.name AS service_name, t.name AS therapist_name
+        s.name AS service_name, s.price AS service_price, t.name AS therapist_name
       FROM appointments a
       JOIN customers c ON c.id = a.customer_id
       JOIN services s ON s.id = a.service_id
@@ -622,6 +638,12 @@ setInterval(() => {
       const apptMinutes = parseTimeToMinutes(appt.start_time);
       const diff = apptMinutes - nowMinutes;
 
+      const totalAmount = Number(appt.service_price || 0) + Number(appt.room_fee || 0);
+      const [h, m] = (appt.start_time || '14:00').split(':').map(Number);
+      let arriveMins = (h * 60 + m) - 10;
+      if (arriveMins < 0) arriveMins += 24 * 60;
+      const arriveByTime = `${String(Math.floor(arriveMins / 60) % 24).padStart(2, '0')}:${String(arriveMins % 60).padStart(2, '0')}`;
+
       // 1-hour reminder window (between 50 and 65 mins before start time)
       if (diff > 50 && diff <= 65 && !appt.reminder_1h_sent) {
         db.prepare("UPDATE appointments SET reminder_1h_sent = 1, reminded_at = datetime('now','localtime') WHERE id = ?").run(appt.id);
@@ -630,7 +652,11 @@ setInterval(() => {
           customerName: appt.customer_name,
           serviceName: appt.service_name,
           therapistName: appt.therapist_name,
+          date: appt.appointment_date,
           time: appt.start_time,
+          arriveByTime,
+          totalAmount,
+          hasRoom: Boolean(appt.has_room),
           minutesBefore: 60
         }).catch((e) => console.error('[auto-remind 1h error]:', e.message));
         console.log(`[auto-remind] Sent 1-hour reminder for appt #${appt.id} to ${appt.customer_email}`);
@@ -644,7 +670,11 @@ setInterval(() => {
           customerName: appt.customer_name,
           serviceName: appt.service_name,
           therapistName: appt.therapist_name,
+          date: appt.appointment_date,
           time: appt.start_time,
+          arriveByTime,
+          totalAmount,
+          hasRoom: Boolean(appt.has_room),
           minutesBefore: 30
         }).catch((e) => console.error('[auto-remind 30m error]:', e.message));
         console.log(`[auto-remind] Sent 30-min reminder for appt #${appt.id} to ${appt.customer_email}`);

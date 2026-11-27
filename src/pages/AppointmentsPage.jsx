@@ -214,18 +214,23 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
     }
   };
 
-  const [remindingId, setRemindingId] = useState(null);
+  const [remindingAppointment, setRemindingAppointment] = useState(null);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
-  const remindCustomer = async (item) => {
-    setRemindingId(item.id);
+  const sendReminder = async (item, minutes = 60) => {
+    setSendingReminder(true);
     try {
-      const res = await api(`/api/appointments/${item.id}/remind`, { method: 'POST' });
+      const res = await api(`/api/appointments/${item.id}/remind`, {
+        method: 'POST',
+        body: JSON.stringify({ minutes })
+      });
       notify(res.message);
+      setRemindingAppointment(null);
       onChanged();
     } catch (err) {
       notify(err.message, 'error');
     } finally {
-      setRemindingId(null);
+      setSendingReminder(false);
     }
   };
 
@@ -447,8 +452,7 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
                             {['confirmed', 'pending'].includes(item.status) && (
                               <button
                                 className="mini-action"
-                                onClick={() => remindCustomer(item)}
-                                disabled={remindingId === item.id}
+                                onClick={() => setRemindingAppointment(item)}
                                 title="Send Advance Reminder Notification (SMS / Email)"
                                 style={{
                                   background: item.reminded_at ? '#fcedef' : 'rgba(136, 28, 45, 0.08)',
@@ -458,12 +462,12 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  padding: '4px 8px',
+                                  padding: '4px 10px',
                                   fontSize: '0.8rem'
                                 }}
                               >
                                 <Bell size={13} />
-                                <span>{remindingId === item.id ? '...' : 'Remind'}</span>
+                                <span>Remind</span>
                               </button>
                             )}
                             {item.status === 'pending' && (
@@ -744,6 +748,66 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* SEND ADVANCE REMINDER MODAL WITH DETAILED PREVIEW */}
+      {remindingAppointment && (
+        <Modal
+          title="Send Appointment Reminder"
+          subtitle={`Send notification to ${remindingAppointment.customer_name} via Gmail and SMS`}
+          onClose={() => setRemindingAppointment(null)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ background: '#fdf5f6', border: '1.5px solid #edd1d5', borderRadius: '12px', padding: '14px 16px' }}>
+              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#570c19', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Bell size={16} /> Notification Preview
+              </div>
+              <div style={{ fontSize: '0.86rem', lineHeight: 1.6, color: '#4a282e' }}>
+                <div>👤 <strong>Customer:</strong> {remindingAppointment.customer_name} ({remindingAppointment.customer_email || 'No email provided'})</div>
+                <div>📅 <strong>Date:</strong> {dateLabel(remindingAppointment.appointment_date)}</div>
+                <div>⏰ <strong>Session Time:</strong> {remindingAppointment.start_time}</div>
+                <div>📍 <strong>Dapat Nandoon Na:</strong> {(() => {
+                  const [h, m] = (remindingAppointment.start_time || '14:00').split(':').map(Number);
+                  let arriveMins = (h * 60 + m) - 10;
+                  if (arriveMins < 0) arriveMins += 24 * 60;
+                  return `${String(Math.floor(arriveMins / 60) % 24).padStart(2, '0')}:${String(arriveMins % 60).padStart(2, '0')}`;
+                })()} (10 mins before session)</div>
+                <div>💆 <strong>Service:</strong> {remindingAppointment.service_name} {Boolean(remindingAppointment.has_room) && '(+₱100 Room)'}</div>
+                <div>👤 <strong>Therapist:</strong> {remindingAppointment.therapist_name || 'Assigned Therapist'}</div>
+                <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #e4c4c8', fontWeight: 800, color: '#881c2d', fontSize: '0.95rem' }}>
+                  💰 Halagang Babayaran: {money(Number(remindingAppointment.service_price || 0) + Number(remindingAppointment.room_fee || 0))}
+                </div>
+              </div>
+            </div>
+
+            {!remindingAppointment.customer_email && (
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: '8px', padding: '10px 12px', fontSize: '0.82rem', color: '#b78103' }}>
+                ⚠️ Notice: Walang nilagay na Gmail address ang customer. Magre-record pa rin ito sa system logs para ma-track ng reception.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={sendingReminder}
+                onClick={() => sendReminder(remindingAppointment, 60)}
+                style={{ justifyContent: 'center', padding: '10px 16px', background: '#881c2d' }}
+              >
+                {sendingReminder ? 'Sending...' : '⏰ Send 1-Hour Advance Reminder (Email & SMS)'}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={sendingReminder}
+                onClick={() => sendReminder(remindingAppointment, 30)}
+                style={{ justifyContent: 'center', padding: '10px 16px' }}
+              >
+                {sendingReminder ? 'Sending...' : '⏳ Send 30-Minute Advance Reminder (Email & SMS)'}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 
