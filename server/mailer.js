@@ -88,8 +88,8 @@ async function sendMail({ to, subject, html, text }) {
  * 1. Booking Confirmation Email
  */
 async function sendBookingConfirmedEmail({ to, customerName, serviceName, therapistName, date, time, duration }) {
-  const subject = `Appointment Confirmed: ${serviceName} at 2 Hands Wellness`;
-  const text = `Hi ${customerName}, your appointment for ${serviceName} on ${date} at ${time} has been confirmed. Therapist: ${therapistName || 'Any Available Therapist'}. Location: Quirino Highway, San Jose del Monte, Bulacan.`;
+  const subject = `Appointment Confirmed: ${serviceName} at WJ Wellness Spa`;
+  const text = `Hi ${customerName}, your appointment for ${serviceName} on ${date} at ${time} has been confirmed. Therapist: ${therapistName || 'Any Available Therapist'}. Location: 2nd Floor JJMB Building, Brgy. Gaya-gaya, San Jose del Monte, Bulacan.`;
 
   const html = `
 <!DOCTYPE html>
@@ -97,33 +97,33 @@ async function sendBookingConfirmedEmail({ to, customerName, serviceName, therap
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f4f7f4; margin: 0; padding: 20px; color: #1e3328; }
-    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #d9e5dc; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-    .header { background: #14382e; padding: 28px 24px; text-align: center; color: #ffffff; }
-    .header h1 { margin: 10px 0 0; font-size: 22px; letter-spacing: 0.05em; font-weight: 800; }
-    .header p { margin: 4px 0 0; font-size: 13px; color: #b5cbbb; letter-spacing: 0.1em; text-transform: uppercase; }
-    .badge { display: inline-block; background: #c89d53; color: #ffffff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-top: 10px; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fdf6f7; margin: 0; padding: 20px; color: #2d1116; }
+    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 2px solid #881c2d; box-shadow: 0 8px 28px rgba(136,28,45,0.14); }
+    .header { background: linear-gradient(135deg, #881c2d 0%, #570c19 100%); padding: 28px 20px; text-align: center; color: #ffffff; }
+    .header h1 { margin: 8px 0 0; font-size: 22px; font-weight: 800; letter-spacing: 0.04em; }
+    .header p { margin: 4px 0 0; font-size: 13px; color: #ffd6dc; text-transform: uppercase; letter-spacing: 0.08em; }
+    .badge { display: inline-block; background: rgba(255,255,255,0.2); color: #ffffff; font-size: 12px; font-weight: 800; padding: 5px 14px; border-radius: 20px; letter-spacing: 0.05em; border: 1px solid rgba(255,255,255,0.4); margin-bottom: 6px; }
     .content { padding: 28px 24px; }
-    .greeting { font-size: 16px; font-weight: 700; color: #173b32; margin-bottom: 12px; }
-    .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #fbfdfb; border: 1px solid #e1ebe3; border-radius: 10px; overflow: hidden; }
-    .details-table td { padding: 12px 16px; border-bottom: 1px solid #eef4f0; font-size: 14px; }
-    .details-table td.label { color: #617769; font-weight: 600; width: 35%; }
-    .details-table td.value { color: #14382e; font-weight: 700; }
-    .note-box { background: #edf6f0; border-left: 4px solid #236544; padding: 14px 16px; border-radius: 0 8px 8px 0; margin-top: 20px; font-size: 13px; color: #365041; line-height: 1.5; }
-    .footer { background: #f9fbf9; padding: 20px 24px; text-align: center; font-size: 12px; color: #788d80; border-top: 1px solid #eef3ef; }
+    .greeting { font-size: 16px; font-weight: 700; color: #570c19; margin-bottom: 12px; }
+    .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #fffdfd; border: 1px solid #ebd9dc; border-radius: 10px; overflow: hidden; }
+    .details-table td { padding: 12px 16px; border-bottom: 1px solid #f5eaec; font-size: 14px; }
+    .details-table td.label { color: #7a5057; font-weight: 600; width: 35%; }
+    .details-table td.value { color: #2d1116; font-weight: 700; }
+    .note-box { background: #fff3f5; border-left: 4px solid #881c2d; padding: 14px 16px; border-radius: 0 8px 8px 0; margin-top: 20px; font-size: 13px; color: #570c19; line-height: 1.5; }
+    .footer { background: #faf4f5; padding: 20px 24px; text-align: center; font-size: 12px; color: #785a60; border-top: 1px solid #f2e1e3; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <div style="font-size: 28px;">🌿</div>
-      <h1>2 HANDS MASSAGE & WELLNESS</h1>
-      <p>San Jose del Monte, Bulacan Branch</p>
+      <div style="font-size: 28px;">🌸</div>
+      <h1>WJ WELLNESS SPA</h1>
+      <p>Brgy. Gaya-gaya, San Jose del Monte, Bulacan</p>
       <div class="badge">✓ APPOINTMENT CONFIRMED</div>
     </div>
     <div class="content">
       <div class="greeting">Magandang araw, ${customerName}!</div>
-      <p style="font-size: 14px; line-height: 1.6; color: #405748; margin: 0;">
+      <p style="font-size: 14px; line-height: 1.6; color: #4a282e; margin: 0;">
         Ikinagagalak naming ipaalam na <strong>kumpirmado na ang inyong appointment</strong>. Inihahanda na ng aming team ang inyong wellness session.
       </p>
 
@@ -146,20 +146,20 @@ async function sendBookingConfirmedEmail({ to, customerName, serviceName, therap
         </tr>
         <tr>
           <td class="label">📍 Lokasyon:</td>
-          <td class="value">Quirino Highway, San Jose del Monte, Bulacan</td>
+          <td class="value">2nd Floor JJMB Building, Brgy. Gaya-gaya, San Jose del Monte, Bulacan (Near Grace Medical Center)</td>
         </tr>
       </table>
 
       <div class="note-box">
-        <strong>💡 Branch Reminder:</strong> Mangyaring dumating 10–15 minuto bago ang nakatakdang oras para sa inyong pre-massage consultation at warm welcome drink. Kung kailangang mag-reschedule, maaari po kayong tumawag o mag-text sa ating reception.
+        <strong>💡 Branch Reminder:</strong> Mangyaring dumating 10–15 minuto bago ang nakatakdang oras para sa inyong pre-massage consultation at warm welcome drink. Kung kailangang mag-reschedule, mangyaring tumawag sa 0935-8548-741.
       </div>
     </div>
     <div class="footer">
-      © ${new Date().getFullYear()} 2 Hands Massage & Wellness · Quirino Highway, SJDM, Bulacan<br>
-      Para sa mga katanungan, sumagot lamang sa email na ito o tumawag sa branch desk.
+      © ${new Date().getFullYear()} WJ Wellness Spa · Brgy. Gaya-gaya, SJDM, Bulacan<br>
+      Para sa mga katanungan, sumagot lamang sa email na ito o tumawag sa 0935-8548-741.
     </div>
   </div>
-</body>
+ </body>
 </html>
   `;
 

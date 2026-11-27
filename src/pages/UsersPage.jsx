@@ -149,7 +149,7 @@ export function UsersPage({ user, refreshKey, onChanged, notify }) {
         <Modal title="Create staff account" subtitle="Use a unique email address and a strong temporary password." onClose={() => setShowModal(false)}>
           <form onSubmit={save} className="modal-form">
             <Field label="Full name" required value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} placeholder="Staff member's name" />
-            <Field label="Email address" type="email" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="name@2hands.com" />
+            <Field label="Email address" type="email" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="name@wjwellness.com" />
             <Field label="Temporary password" type="password" required value={form.password} onChange={(v) => setForm({ ...form, password: v })} placeholder="At least 10 characters" hint="Share securely and ask the user to change it after first sign-in." />
             <Field
               label="Access role"
