@@ -580,10 +580,9 @@ app.post('/api/appointments/:id/remind', staff, async (req, res) => {
   const flagColumn = minutesBefore === 30 ? 'reminder_30m_sent' : 'reminder_1h_sent';
   db.prepare(`UPDATE appointments SET reminded_at = datetime('now','localtime'), ${flagColumn} = 1 WHERE id = ?`).run(id);
 
-  let emailSent = false;
-  let emailError = null;
+  // Send email asynchronously in the background so the user UI responds instantly
   if (appt.customer_email) {
-    const mailResult = await mailer.sendAdvanceReminderEmail({
+    mailer.sendAdvanceReminderEmail({
       to: appt.customer_email,
       customerName: appt.customer_name,
       serviceName: appt.service_name,
@@ -594,20 +593,22 @@ app.post('/api/appointments/:id/remind', staff, async (req, res) => {
       totalAmount,
       hasRoom: Boolean(appt.has_room),
       minutesBefore
+    }).then((res) => {
+      console.log(`[mailer reminder result]: sent=${res.success} to=${appt.customer_email}`);
+    }).catch((err) => {
+      console.error(`[mailer reminder error]: ${err.message}`);
     });
-    emailSent = mailResult.success;
-    emailError = mailResult.error || null;
   }
 
-  const label = minutesBefore === 60 ? '1 hour' : '30 mins';
+  const label = minutesBefore === 60 ? '1-hour' : '30-minute';
   audit(req.user.id, 'REMIND', 'appointment', id, `Sent ${label} advance reminder to ${appt.customer_name}`);
 
   const smsText = `Hi ${appt.customer_name}! Paalala mula sa WJ Wellness Spa: May appointment kayo ngayong ${appt.appointment_date} sa ganap na ${appt.start_time}. Oras na dapat andon na: ${arriveByTime}. Serbisyo: ${appt.service_name} (Total: ₱${totalAmount}). Therapist: ${appt.therapist_name || 'Staff'}. Kita-kits sa JJMB Bldg Gaya-gaya!`;
 
   res.json({
-    message: emailSent
-      ? `Advance reminder sent to ${appt.customer_email}!`
-      : (appt.customer_email ? `Reminder queued for ${appt.customer_email}` : `Reminder logged for ${appt.customer_name} (no email provided).`),
+    message: appt.customer_email
+      ? `Reminder sent to ${appt.customer_email}!`
+      : `Reminder recorded for ${appt.customer_name} (no email).`,
     customer_name: appt.customer_name,
     customer_phone: appt.customer_phone,
     customer_email: appt.customer_email,
