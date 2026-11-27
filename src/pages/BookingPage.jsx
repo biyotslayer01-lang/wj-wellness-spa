@@ -336,7 +336,7 @@ export function BookingPage({ notify }) {
                 <strong>Branch Location</strong>
                 <span>2nd Floor JJMB Building, National Road, Brgy Gaya-gaya, SJDM Bulacan</span>
                 <a
-                  href="https://www.google.com/maps/search/?api=1&query=14.7946,121.0528"
+                  href="https://maps.google.com/?q=14.794972,121.052528"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="booking-detail-link"
@@ -410,7 +410,7 @@ export function BookingPage({ notify }) {
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <a
-                  href="https://www.google.com/maps/dir/?api=1&destination=14.7946,121.0528&destination_place_id=&travelmode=driving"
+                  href="https://www.google.com/maps/dir/?api=1&destination=14.794972,121.052528&destination_place_id=&travelmode=driving"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -430,7 +430,7 @@ export function BookingPage({ notify }) {
                   🚗 Navigate / Directions
                 </a>
                 <a
-                  href="https://www.google.com/maps/search/?api=1&query=14.7946,121.0528"
+                  href="https://maps.google.com/?q=14.794972,121.052528"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -453,7 +453,7 @@ export function BookingPage({ notify }) {
             <div style={{ position: 'relative', width: '100%', height: '240px', background: '#f5ebea' }}>
               <iframe
                 title="WJ Wellness Spa Google Maps Exact Location"
-                src="https://maps.google.com/maps?q=14.7946,121.0528+(WJ%20Wellness%20Spa%20-%20JJMB%20Building,%20Gaya-gaya)&t=&z=16&ie=UTF8&iwloc=B&output=embed"
+                src="https://maps.google.com/maps?q=14.794972,121.052528+(WJ%20Wellness%20Spa%20-%20JJMB%20Building)&t=&z=17&ie=UTF8&iwloc=B&output=embed"
                 width="100%"
                 height="100%"
                 style={{ border: 0, display: 'block' }}
@@ -469,7 +469,7 @@ export function BookingPage({ notify }) {
                 <span>Near Gaya-gaya Barangay Hall &amp; National Road</span>
               </div>
               <div style={{ color: '#881c2d', fontWeight: 700 }}>
-                GPS: 14.7946° N, 121.0528° E
+                GPS: 14°47'41.9"N 121°03'09.1"E (14.794972, 121.052528)
               </div>
             </div>
           </div>
