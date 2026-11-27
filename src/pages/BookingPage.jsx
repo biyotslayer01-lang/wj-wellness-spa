@@ -5,23 +5,32 @@ import { api, money, todayString } from '../api';
 import { ThemeToggle } from '../context/ThemeContext';
 
 const SERVICE_IMAGES = {
-  signature: '/samples/massage-signature.jpg',
-  back: '/samples/massage-signature.jpg',
-  premium: '/samples/massage-swedish.jpg',
-  deluxe: '/samples/prod-compress.jpg',
-  ventosa: '/samples/prod-compress.jpg',
-  scrub: '/samples/prod-scrub.jpg',
-  luxury: '/samples/prod-scrub.jpg',
-  stone: '/samples/prod-stones.jpg',
-  executive: '/samples/prod-stones.jpg',
-  superior: '/samples/massage-signature.jpg',
-  couples: '/samples/massage-swedish.jpg',
-  deep: '/samples/massage-signature.jpg',
-  tissue: '/samples/massage-signature.jpg',
-  foot: '/samples/massage-footspa.jpg',
-  reflex: '/samples/massage-footspa.jpg',
-  ear: '/samples/prod-oil.jpg',
-  candling: '/samples/prod-oil.jpg'
+  // Specific treatments
+  'back': '/samples/massage-back.jpg',
+  'signature': '/samples/massage-signature.jpg',
+  'premium': '/samples/massage-swedish.jpg',
+  'hot stone': '/samples/massage-hotstone.jpg',
+  'stone': '/samples/massage-hotstone.jpg',
+  'executive': '/samples/massage-hotstone.jpg',
+  'ventosa': '/samples/prod-compress.jpg',
+  'deluxe': '/samples/prod-compress.jpg',
+  'scrub': '/samples/massage-scrub.jpg',
+  'luxury': '/samples/massage-scrub.jpg',
+  'superior': '/samples/massage-spa-wellness.jpg',
+  'couples': '/samples/massage-spa-wellness.jpg',
+  'deep tissue': '/samples/massage-back.jpg',
+  'tissue': '/samples/massage-back.jpg',
+  'deep': '/samples/massage-back.jpg',
+  'foot reflex': '/samples/massage-footspa.jpg',
+  'foot': '/samples/massage-footspa.jpg',
+  'reflex': '/samples/massage-footspa.jpg',
+  'ear candling': '/samples/massage-ear-candling.jpg',
+  'candling': '/samples/massage-ear-candling.jpg',
+  'ear': '/samples/massage-ear-candling.jpg',
+  'facial': '/samples/massage-facial-glow.jpg',
+  'glow': '/samples/massage-facial-glow.jpg',
+  'manicure': '/samples/massage-manicure.jpg',
+  'pedicure': '/samples/massage-pedicure.jpg'
 };
 
 function getServiceImage(name = '') {

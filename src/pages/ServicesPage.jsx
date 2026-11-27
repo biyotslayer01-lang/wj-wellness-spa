@@ -3,6 +3,42 @@ import { Plus, Pencil, ChevronRight, Flower2, Sparkles } from 'lucide-react';
 import { PageHeading, EmptyState, LoadingLine, InlineError, Modal, Field, useApiData } from '../components/Common';
 import { api, money } from '../api';
 
+const SERVICE_IMAGES = {
+  'back': '/samples/massage-back.jpg',
+  'signature': '/samples/massage-signature.jpg',
+  'premium': '/samples/massage-swedish.jpg',
+  'hot stone': '/samples/massage-hotstone.jpg',
+  'stone': '/samples/massage-hotstone.jpg',
+  'executive': '/samples/massage-hotstone.jpg',
+  'ventosa': '/samples/prod-compress.jpg',
+  'deluxe': '/samples/prod-compress.jpg',
+  'scrub': '/samples/massage-scrub.jpg',
+  'luxury': '/samples/massage-scrub.jpg',
+  'superior': '/samples/massage-spa-wellness.jpg',
+  'couples': '/samples/massage-spa-wellness.jpg',
+  'deep tissue': '/samples/massage-back.jpg',
+  'tissue': '/samples/massage-back.jpg',
+  'deep': '/samples/massage-back.jpg',
+  'foot reflex': '/samples/massage-footspa.jpg',
+  'foot': '/samples/massage-footspa.jpg',
+  'reflex': '/samples/massage-footspa.jpg',
+  'ear candling': '/samples/massage-ear-candling.jpg',
+  'candling': '/samples/massage-ear-candling.jpg',
+  'ear': '/samples/massage-ear-candling.jpg',
+  'facial': '/samples/massage-facial-glow.jpg',
+  'glow': '/samples/massage-facial-glow.jpg',
+  'manicure': '/samples/massage-manicure.jpg',
+  'pedicure': '/samples/massage-pedicure.jpg'
+};
+
+function getServiceImage(name = '') {
+  const lower = name.toLowerCase();
+  for (const [key, img] of Object.entries(SERVICE_IMAGES)) {
+    if (lower.includes(key)) return img;
+  }
+  return '/samples/massage-signature.jpg';
+}
+
 export function ServicesPage({ refreshKey, onChanged, notify }) {
   const { data, loading, error } = useApiData('/api/services', refreshKey);
   const [showModal, setShowModal] = useState(false);
@@ -81,19 +117,28 @@ export function ServicesPage({ refreshKey, onChanged, notify }) {
           <LoadingLine />
         ) : (
           services.map((s, i) => (
-            <div className={`service-card ${!s.active ? 'inactive-card' : ''}`} key={s.id}>
-              <div className={`service-icon service-tone-${i % 5}`}>
-                <Flower2 size={22} />
-              </div>
-              <div className="service-card-head">
-                <span className="service-category">{s.active ? 'BRANCH SERVICE' : 'HIDDEN SERVICE'}</span>
-                <button className="icon-button" onClick={() => open(s)}>
-                  <Pencil size={15} />
+            <div className={`service-card ${!s.active ? 'inactive-card' : ''}`} key={s.id} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'relative', height: '140px', width: '100%', margin: '-16px -16px 14px -16px', overflow: 'hidden' }}>
+                <img
+                  src={getServiceImage(s.name)}
+                  alt={s.name}
+                  style={{ width: 'calc(100% + 32px)', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(30,10,14,0.85) 0%, rgba(30,10,14,0.1) 60%, transparent 100%)' }} />
+                <span style={{ position: 'absolute', bottom: '10px', left: '12px', background: 'rgba(136,28,45,0.88)', color: '#fff', fontSize: '0.72rem', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', letterSpacing: '0.04em' }}>
+                  {s.active ? 'BRANCH SERVICE' : 'HIDDEN'}
+                </span>
+                <button
+                  className="icon-button"
+                  onClick={() => open(s)}
+                  style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.5)', color: '#fff', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none' }}
+                >
+                  <Pencil size={14} />
                 </button>
               </div>
-              <h3>{s.name}</h3>
-              <p>{s.description}</p>
-              <div className="service-card-foot">
+              <h3 style={{ marginTop: '4px' }}>{s.name}</h3>
+              <p style={{ flex: 1 }}>{s.description}</p>
+              <div className="service-card-foot" style={{ marginTop: 'auto' }}>
                 <div>
                   <strong>{Number(s.price) > 0 ? money(s.price) : 'Set price'}</strong>
                   <span>{s.duration_minutes} min · {s.active ? 'Available' : 'Inactive'}</span>
