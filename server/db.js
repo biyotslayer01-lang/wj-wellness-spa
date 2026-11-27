@@ -159,8 +159,8 @@ try {
   const insertTherapist = db.prepare('INSERT INTO therapists (name, phone, gender, is_absent, active) VALUES (?, ?, ?, 0, 1)');
   const updateTherapist = db.prepare('UPDATE therapists SET gender = ?, active = 1 WHERE UPPER(name) = ?');
 
-  // Deactivate old placeholder therapists like "Therapist 1".."Therapist 7" and any old tests
-  db.exec("UPDATE therapists SET active = 0 WHERE name LIKE 'Therapist %' OR name LIKE '%chynita%'");
+  // Permanently purge any old numbered therapists ("Therapist 1", "Therapist 2", etc.) or test records
+  db.exec("DELETE FROM therapists WHERE name LIKE 'Therapist %' OR name LIKE '%chynita%'");
 
   for (const name of maleTherapists) {
     const row = findTherapist.get(name);
@@ -183,35 +183,54 @@ try {
   console.error('Error synchronizing therapists:', e);
 }
 
-function seed() {
-  const existing = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
-  if (existing > 0) return;
+// Ensure all WJ Wellness Spa services exist and are active
+try {
+  const defaultServices = [
+    ['WJ Back Massage', 'Relieves tension and muscle tightness in the upper and lower back.', 300, 30],
+    ['WJ Signature Massage', 'Our flagship full body combination massage blending Swedish strokes, Shiatsu acupressure, and gentle stretches.', 500, 60],
+    ['WJ Premium Massage', 'Premium full body therapeutic massage with customized pressure and soothing oils.', 800, 90],
+    ['WJ Deluxe Massage +ventosa', 'Deep therapeutic massage paired with traditional heated cup suction ventosa.', 800, 90],
+    ['WJ Luxury Massage +body scrub', 'Full body relaxation massage combined with an exfoliating herbal body scrub.', 900, 90],
+    ['WJ Executive Massage +hot stone', 'Soothing full body massage using smooth heated basalt stones to melt away deep tension.', 900, 90],
+    ['WJ Superior Massage Package 1', 'Combination package including Signature Massage, Ventosa, and Ear Candling.', 1200, 120],
+    ['WJ Superior Package 2', 'Ultimate rejuvenation package: Full Body Scrub, Hot Stone Therapy, and Signature Massage.', 1300, 120],
+    ['Couples Massage', 'Synchronized full-body massage for two in a private room.', 1000, 60],
+    ['Deep Tissue', 'Targeted firm pressure targeting deep muscle layers, chronic knots, and tension.', 900, 60],
+    ['Foot Reflex', 'Relaxing foot treatment targeting acupressure points to improve circulation and reduce stress.', 400, 60],
+    ['Ear Candling', 'Gentle holistic ear cleansing that promotes relaxation and relieves sinus pressure.', 250, 30],
+    ['Ventosa', 'Traditional cupping therapy to relieve trapped body coldness, fatigue, and stiffness.', 300, 30],
+    ['Body Scrub', 'Deep skin exfoliation removing dead skin cells and leaving skin soft, smooth, and glowing.', 400, 45],
+    ['Hot Stone', 'Warm volcanic basalt stone treatment promoting deep muscle relaxation and circulation.', 400, 45]
+  ];
 
-  const insertTherapist = db.prepare('INSERT INTO therapists (name, phone) VALUES (?, ?)');
-  const therapistIds = [];
-  for (let i = 1; i <= 7; i += 1) {
-    therapistIds.push(insertTherapist.run(`Therapist ${i}`, '').lastInsertRowid);
+  const findSvc = db.prepare('SELECT id FROM services WHERE UPPER(name) = ?');
+  const insertSvc = db.prepare('INSERT INTO services (name, description, price, duration_minutes, active) VALUES (?, ?, ?, ?, 1)');
+  const updateSvc = db.prepare('UPDATE services SET price = ?, duration_minutes = ?, active = 1 WHERE UPPER(name) = ?');
+
+  for (const [name, desc, price, dur] of defaultServices) {
+    const row = findSvc.get(name.toUpperCase());
+    if (!row) {
+      insertSvc.run(name, desc, price, dur);
+    } else {
+      updateSvc.run(price, dur, name.toUpperCase());
+    }
   }
-
-  const insertUser = db.prepare(`INSERT INTO users (full_name,email,password_hash,role,therapist_id)
-    VALUES (?,?,?,?,?)`);
-  const hash = (password) => bcrypt.hashSync(password, 12);
-  insertUser.run('Business Owner', 'owner@2hands.demo', hash('Owner@123'), 'owner', null);
-  insertUser.run('System Administrator', 'admin@2hands.demo', hash('Admin@123'), 'admin', null);
-  insertUser.run('Front Desk Receptionist', 'reception@2hands.demo', hash('Reception@123'), 'receptionist', null);
-  insertUser.run('Therapist 1', 'therapist@2hands.demo', hash('Therapist@123'), 'therapist', therapistIds[0]);
-
-  const insertService = db.prepare(`INSERT INTO services (name,description,price,duration_minutes)
-    VALUES (?,?,?,?)`);
-  [
-    ['Signature Massage', 'Our flagship full body combination massage blending Swedish strokes, Shiatsu acupressure, and gentle stretches.', 550, 60],
-    ['Aromatherapy Swedish Massage', 'Deeply calming long strokes using customized therapeutic essential botanical oils.', 650, 60],
-    ['Foot Spa & Reflexology', 'Relaxing warm mineral foot bath, peppermint scrub, and targeted pressure point reflexology.', 450, 60],
-    ['Basic Facial Treatment', 'Gentle facial cleansing, soothing steam exfoliation, facial massage, and hydrating herbal mask.', 400, 45],
-    ['Manicure & Hand Spa', 'Complete nail grooming, gentle cuticle care, hand scrub, and moisturizing hand massage.', 300, 45],
-    ['Pedicure & Foot Scrub', 'Complete nail shaping, cuticle therapy, callus smoothing, and relaxing foot soak.', 350, 45]
-  ].forEach((service) => insertService.run(...service));
+} catch (e) {
+  console.error('Error synchronizing services:', e);
 }
 
-seed();
+// Ensure default users exist
+try {
+  const existingUsers = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
+  if (existingUsers === 0) {
+    const insertUser = db.prepare(`INSERT INTO users (full_name,email,password_hash,role,therapist_id) VALUES (?,?,?,?,?)`);
+    const hash = (password) => bcrypt.hashSync(password, 12);
+    insertUser.run('Business Owner', 'owner@wjwellness.com', hash('Owner@123'), 'owner', null);
+    insertUser.run('System Administrator', 'admin@wjwellness.com', hash('Admin@123'), 'admin', null);
+    insertUser.run('Front Desk Receptionist', 'reception@wjwellness.com', hash('Reception@123'), 'receptionist', null);
+  }
+} catch (e) {
+  console.error('Error synchronizing users:', e);
+}
+
 module.exports = db;
