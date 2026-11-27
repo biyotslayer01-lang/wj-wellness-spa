@@ -1211,12 +1211,55 @@ tbody tr:hover {
 }
 
 .therapist-card, .service-card {
-  background: #ffffff;
-  border: 1px solid #e1e9e3;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e1e9e3);
+  color: var(--text-primary);
   border-radius: 13px;
   padding: 20px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
   position: relative;
+}
+
+[data-theme='dark'] .service-card,
+[data-theme='dark'] .therapist-card {
+  background: #1c0e12 !important;
+  border-color: #3d1b22 !important;
+  color: #fcf4f5 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme='dark'] .service-card h3,
+[data-theme='dark'] .therapist-card h3 {
+  color: #fcf4f5 !important;
+}
+
+[data-theme='dark'] .service-card p,
+[data-theme='dark'] .therapist-card p {
+  color: #dbc2c6 !important;
+}
+
+[data-theme='dark'] .service-card-foot strong,
+[data-theme='dark'] .therapist-card-bottom strong {
+  color: #ffd54f !important;
+}
+
+[data-theme='dark'] .service-card-foot span,
+[data-theme='dark'] .therapist-card-bottom span {
+  color: #bda0a5 !important;
+}
+
+[data-theme='dark'] .service-category {
+  color: #ffd54f !important;
+}
+
+[data-theme='dark'] .service-note {
+  background: #241116 !important;
+  border-color: #451b24 !important;
+  color: #dbc2c6 !important;
+}
+
+[data-theme='dark'] .service-note strong {
+  color: #ffd54f !important;
 }
 
 .therapist-card-top {
@@ -3252,5 +3295,104 @@ tbody tr:hover {
     max-height: 90vh;
     padding: 20px 16px;
   }
+}
+
+/* UNIVERSAL DARK MODE ENFORCEMENT - ZERO HARSH WHITE SURFACES */
+[data-theme='dark'] .card,
+[data-theme='dark'] .panel,
+[data-theme='dark'] .service-card,
+[data-theme='dark'] .therapist-card,
+[data-theme='dark'] .modal-card,
+[data-theme='dark'] .modal-body,
+[data-theme='dark'] .stat-card,
+[data-theme='dark'] .table-panel,
+[data-theme='dark'] .table-scroll,
+[data-theme='dark'] .table-scroll table,
+[data-theme='dark'] .table-scroll tbody tr,
+[data-theme='dark'] .booking-summary-box,
+[data-theme='dark'] .schedule-timeline-container,
+[data-theme='dark'] .therapist-timeline-column,
+[data-theme='dark'] .timeline-col-header,
+[data-theme='dark'] .summary-strip,
+[data-theme='dark'] .view-toggle-bar,
+[data-theme='dark'] .service-note {
+  background-color: #1c0e12 !important;
+  color: #fcf4f5 !important;
+  border-color: #3d1b22 !important;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background-color: #261318 !important;
+  color: #ffffff !important;
+  border-color: #4a2129 !important;
+}
+
+[data-theme='dark'] .table-select {
+  background-color: #261318 !important;
+  color: #ffffff !important;
+  border-color: #4a2129 !important;
+}
+
+[data-theme='dark'] .cell-primary {
+  color: #fcf4f5 !important;
+}
+
+[data-theme='dark'] .cell-muted {
+  color: #bda0a5 !important;
+}
+
+[data-theme='dark'] .service-icon {
+  background: #2d1419 !important;
+  color: #ffd54f !important;
+}
+
+[data-theme='dark'] .service-tone-0,
+[data-theme='dark'] .service-tone-1,
+[data-theme='dark'] .service-tone-2,
+[data-theme='dark'] .service-tone-3,
+[data-theme='dark'] .service-tone-4 {
+  background: #2d1419 !important;
+  color: #ffd54f !important;
+}
+
+[data-theme='dark'] .avatar-tone-0,
+[data-theme='dark'] .avatar-tone-1,
+[data-theme='dark'] .avatar-tone-2,
+[data-theme='dark'] .avatar-tone-3,
+[data-theme='dark'] .avatar-tone-4 {
+  background: #2d1419 !important;
+  color: #ffd54f !important;
+}
+
+/* FLASHING PROMINENT LOGIN ERROR ALERT */
+.login-error-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffebee;
+  color: #c62828;
+  border: 1.5px solid #ef5350;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  animation: shakeAlert 0.4s ease-in-out;
+  box-shadow: 0 4px 16px rgba(229, 57, 53, 0.18);
+}
+
+[data-theme='dark'] .login-error-alert {
+  background: #2e0f14 !important;
+  color: #ff8a9b !important;
+  border-color: #881c2d !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+@keyframes shakeAlert {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
 }
 

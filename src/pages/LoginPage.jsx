@@ -355,7 +355,12 @@ export function LoginPage({ onLogin, notify }) {
               </div>
             </div>
 
-            {error && <div className="form-error"><CircleAlert size={16} />{error}</div>}
+            {error && (
+              <div className="login-error-alert">
+                <CircleAlert size={20} style={{ flexShrink: 0 }} />
+                <span>{error}</span>
+              </div>
+            )}
             <button className="primary-button login-submit" type="submit" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in to workspace'} <ArrowRight size={19} />
             </button>
