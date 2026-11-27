@@ -380,46 +380,98 @@ export function BookingPage({ notify }) {
             </div>
           </div>
 
-          {/* INTERACTIVE GOOGLE MAPS CARD */}
+          {/* ACCURATE INTERACTIVE BRANCH FINDER & GOOGLE MAPS API CARD */}
           <div className="maps-container-card" style={{
             marginTop: '24px',
-            borderRadius: '16px',
+            borderRadius: '18px',
             border: '1.5px solid var(--border-color, #ebdcdb)',
             overflow: 'hidden',
-            boxShadow: '0 8px 24px rgba(84, 17, 29, 0.08)'
+            boxShadow: '0 8px 26px rgba(84, 17, 29, 0.09)',
+            background: 'var(--card-bg, #ffffff)'
           }}>
-            <div className="maps-header" style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-color, #ebdcdb)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.1rem' }}>📍</span>
-                <strong style={{ fontSize: '0.92rem' }}>JJMB Building, Brgy. Gaya-gaya, SJDM Bulacan</strong>
+            <div className="maps-header" style={{
+              padding: '16px 18px',
+              borderBottom: '1px solid var(--border-color, #ebdcdb)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                  <span style={{ fontSize: '1.25rem' }}>📍</span>
+                  <strong style={{ fontSize: '0.98rem', color: 'var(--text-color, #2b1115)' }}>WJ Wellness Spa · Gaya-gaya Branch</strong>
+                </div>
+                <div style={{ fontSize: '0.82rem', color: '#7a5a60' }}>
+                  2nd Floor JJMB Building, National Road, Brgy. Gaya-gaya, SJDM Bulacan
+                </div>
               </div>
-              <a
-                href="https://maps.app.goo.gl/TaGS9glrZX5wv9USD"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  background: 'linear-gradient(135deg, #881c2d 0%, #570c19 100%)',
-                  color: '#ffffff',
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(87, 12, 25, 0.25)'
-                }}
-              >
-                Get Directions
-              </a>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <a
+                  href="https://www.google.com/maps/dir/?api=1&destination=14.7946,121.0528&destination_place_id=&travelmode=driving"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'linear-gradient(135deg, #881c2d 0%, #570c19 100%)',
+                    color: '#ffffff',
+                    padding: '8px 14px',
+                    borderRadius: '9px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 3px 10px rgba(87, 12, 25, 0.25)'
+                  }}
+                >
+                  🚗 Navigate / Directions
+                </a>
+                <a
+                  href="https://maps.app.goo.gl/TaGS9glrZX5wv9USD"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'rgba(136, 28, 45, 0.08)',
+                    color: '#881c2d',
+                    border: '1px solid #ebdcdb',
+                    padding: '8px 12px',
+                    borderRadius: '9px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textDecoration: 'none'
+                  }}
+                >
+                  View in GMaps ↗
+                </a>
+              </div>
             </div>
-            <iframe
-              title="WJ Wellness Spa Google Maps Location"
-              src="https://maps.google.com/maps?q=JJMB%20Building,%20National%20Road,%20Gaya-gaya,%20San%20Jose%20del%20Monte,%20Bulacan&t=&z=16&ie=UTF8&iwloc=&output=embed"
-              width="100%"
-              height="220"
-              style={{ border: 0, display: 'block' }}
-              loading="lazy"
-              allowFullScreen
-            />
+
+            {/* LIVE ACCURATE EMBEDDED GMAPS IFRAME */}
+            <div style={{ position: 'relative', width: '100%', height: '240px', background: '#f5ebea' }}>
+              <iframe
+                title="WJ Wellness Spa Google Maps Exact Location"
+                src="https://maps.google.com/maps?q=14.7946,121.0528+(WJ%20Wellness%20Spa%20-%20JJMB%20Building,%20Gaya-gaya)&t=&z=16&ie=UTF8&iwloc=B&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0, display: 'block' }}
+                loading="lazy"
+                allowFullScreen
+              />
+            </div>
+
+            {/* BRANCH FINDER QUICK NAVIGATION BADGES */}
+            <div style={{ padding: '12px 16px', background: 'var(--card-bg-alt, #faf4f5)', borderTop: '1px solid var(--border-color, #ebdcdb)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', fontSize: '0.82rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#68454b' }}>
+                <span style={{ fontWeight: 800, color: '#881c2d' }}>Landmarks:</span>
+                <span>Near Gaya-gaya Barangay Hall &amp; National Road</span>
+              </div>
+              <div style={{ color: '#881c2d', fontWeight: 700 }}>
+                GPS: 14.7946° N, 121.0528° E
+              </div>
+            </div>
           </div>
 
           <div className="booking-note" style={{ marginTop: '20px' }}>
