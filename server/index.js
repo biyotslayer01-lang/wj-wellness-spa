@@ -57,7 +57,14 @@ const safeEqual = (a, b) => {
   return first.length === second.length && crypto.timingSafeEqual(first, second);
 };
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', application: '2 Hands Wellness Management System' }));
+app.get('/api/health', (_req, res) => res.json({
+  status: 'ok',
+  application: 'WJ Wellness Spa Management System',
+  mailer: {
+    live: Boolean(process.env.GMAIL_USER && (process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD)),
+    user: process.env.GMAIL_USER ? process.env.GMAIL_USER.replace(/(.{3})(.*)(@.*)/, '$1***$3') : null
+  }
+}));
 
 app.get('/api/auth/csrf', (req, res) => {
   const token = crypto.randomBytes(32).toString('hex');

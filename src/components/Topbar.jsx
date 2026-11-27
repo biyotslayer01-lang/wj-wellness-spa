@@ -23,7 +23,6 @@ export function Topbar({ user, page, setMobileNav, logout }) {
       <div className="topbar-right">
         <ThemeToggle />
         <div className="today-label"><CalendarDays size={15} /> {dateText}</div>
-        <div className="topbar-avatar" title={user.full_name}>{user.full_name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}</div>
         {logout && (
           <button
             className="icon-button topbar-logout-btn"
