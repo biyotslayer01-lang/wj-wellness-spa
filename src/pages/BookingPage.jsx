@@ -336,7 +336,7 @@ export function BookingPage({ notify }) {
                 <strong>Branch Location</strong>
                 <span>2nd Floor JJMB Building, National Road, Brgy Gaya-gaya, SJDM Bulacan</span>
                 <a
-                  href="https://maps.app.goo.gl/TaGS9glrZX5wv9USD"
+                  href="https://www.google.com/maps/search/?api=1&query=14.7946,121.0528"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="booking-detail-link"
@@ -430,7 +430,7 @@ export function BookingPage({ notify }) {
                   🚗 Navigate / Directions
                 </a>
                 <a
-                  href="https://maps.app.goo.gl/TaGS9glrZX5wv9USD"
+                  href="https://www.google.com/maps/search/?api=1&query=14.7946,121.0528"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
