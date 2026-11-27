@@ -1,0 +1,53 @@
+<svg width="400" height="110" viewBox="0 0 400 110" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#801b2a"/>
+      <stop offset="50%" stop-color="#9e2a3b"/>
+      <stop offset="100%" stop-color="#5c101c"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#dfb76c"/>
+      <stop offset="50%" stop-color="#f5d799"/>
+      <stop offset="100%" stop-color="#c59b4c"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#801b2a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Left Emblem / Monogram -->
+  <g transform="translate(15, 10)">
+    <!-- Elegant Gold Ring -->
+    <circle cx="45" cy="45" r="42" fill="none" stroke="url(#goldGrad)" stroke-width="2.5" opacity="0.9"/>
+    <circle cx="45" cy="45" r="38" fill="url(#wineGrad)" filter="url(#softGlow)"/>
+    
+    <!-- Stylized Lotus / Hands Floral Leaf -->
+    <path d="M 45 20 C 47 28 58 35 60 46 C 60 55 53 62 45 62 C 37 62 30 55 30 46 C 32 35 43 28 45 20 Z" fill="#ffffff" opacity="0.95"/>
+    <path d="M 45 28 C 39 36 26 42 28 50 C 29 55 35 60 41 61 C 37 54 36 44 45 28 Z" fill="url(#goldGrad)" opacity="0.9"/>
+    <path d="M 45 28 C 51 36 64 42 62 50 C 61 55 55 60 49 61 C 53 54 54 44 45 28 Z" fill="url(#goldGrad)" opacity="0.9"/>
+
+    <!-- WJ Letters -->
+    <text x="45" y="58" font-family="'Cinzel', 'Playfair Display', 'Times New Roman', serif" font-size="22" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">WJ</text>
+  </g>
+
+  <!-- Brand Typography -->
+  <g transform="translate(125, 20)">
+    <!-- Title: WJ WELLNESS SPA -->
+    <text x="0" y="32" font-family="'Playfair Display', 'Cinzel', 'Georgia', serif" font-size="28" font-weight="900" fill="#6d1320" letter-spacing="2">
+      WJ WELLNESS SPA
+    </text>
+
+    <!-- Subtitle: HOME & HOTEL SERVICE · CSJDM -->
+    <text x="1" y="52" font-family="'DM Sans', 'Segoe UI', sans-serif" font-size="11.5" font-weight="700" fill="#a83244" letter-spacing="3.2">
+      HOME / HOTEL SERVICE &amp; BRANCH
+    </text>
+
+    <!-- Branch line: BRGY. GAYA-GAYA, CSJDM BULACAN -->
+    <text x="1" y="68" font-family="'DM Sans', 'Segoe UI', sans-serif" font-size="9.5" font-weight="600" fill="#8a6b6f" letter-spacing="1.5">
+      BRGY. GAYA-GAYA, CSJDM BULACAN
+    </text>
+
+    <!-- Gold Accent Line -->
+    <line x1="1" y1="76" x2="250" y2="76" stroke="url(#goldGrad)" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
+</svg>
