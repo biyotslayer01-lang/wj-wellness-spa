@@ -111,8 +111,18 @@ function App() {
   }
 
   const isBookingPath = window.location.pathname === '/book' || hash === '#book' || hash === '#/book';
-  if (isBookingPath) return <BookingPage notify={notify} />;
-  if (!user) return <LoginPage onLogin={login} notify={notify} />;
+  if (isBookingPath) return (
+    <>
+      <BookingPage notify={notify} />
+      {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
+    </>
+  );
+  if (!user) return (
+    <>
+      <LoginPage onLogin={login} notify={notify} />
+      {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
+    </>
+  );
 
   return (
     <div className="app-shell">

@@ -91,7 +91,9 @@ export function LoginPage({ onLogin, notify }) {
 
     // Verify CAPTCHA
     if (captchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
-      setError('Security code does not match. Please enter the new code shown.');
+      const msg = 'Security code does not match. Please enter the new code shown.';
+      setError(msg);
+      notify(msg, 'error');
       refreshCaptcha();
       return;
     }
@@ -100,8 +102,9 @@ export function LoginPage({ onLogin, notify }) {
     try {
       await onLogin(email, password);
     } catch (err) {
-      setError(err.message);
-      notify(err.message, 'error');
+      const msg = err.message || 'Incorrect email or password. Please try again.';
+      setError(msg);
+      notify(msg, 'error');
       refreshCaptcha();
     } finally {
       setLoading(false);
