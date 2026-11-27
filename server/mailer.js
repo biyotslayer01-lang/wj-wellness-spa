@@ -1,11 +1,18 @@
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const GMAIL_USER = process.env.GMAIL_USER || process.env.SMTP_USER || '';
 const GMAIL_PASS = process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || '';
 const FROM_NAME = process.env.EMAIL_FROM_NAME || 'WJ Wellness Spa';
 
-let transporter = null;
+let resendClient = null;
+if (RESEND_API_KEY) {
+  resendClient = new Resend(RESEND_API_KEY);
+  console.log('[mailer] Configured live Resend API email service.');
+}
 
+let transporter = null;
 if (GMAIL_USER && GMAIL_PASS) {
   transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -15,8 +22,10 @@ if (GMAIL_USER && GMAIL_PASS) {
     }
   });
   console.log(`[mailer] Configured live Gmail transporter with user: ${GMAIL_USER}`);
-} else {
-  console.log('[mailer] No GMAIL_USER / GMAIL_APP_PASSWORD found in .env. Operating in logging mode.');
+}
+
+if (!resendClient && !transporter) {
+  console.log('[mailer] No RESEND_API_KEY or GMAIL credentials found in .env. Operating in logging mode.');
 }
 
 async function sendMail({ to, subject, html, text }) {
@@ -25,15 +34,36 @@ async function sendMail({ to, subject, html, text }) {
     return { success: false, reason: 'Invalid email address' };
   }
 
-  const mailOptions = {
-    from: `"${FROM_NAME}" <${GMAIL_USER || 'no-reply@wj-wellness.com'}>`,
-    to,
-    subject,
-    text: text || '',
-    html
-  };
+  // 1. Try Resend if configured
+  if (resendClient) {
+    try {
+      const res = await resendClient.emails.send({
+        from: `${FROM_NAME} <onboarding@resend.dev>`,
+        to: [to],
+        subject,
+        html,
+        text: text || ''
+      });
+      if (res.error) {
+        console.error('[mailer] Resend API error:', res.error);
+        return { success: false, error: res.error.message, live: false };
+      }
+      console.log(`[mailer] Email successfully sent via Resend to ${to}: ${res.data?.id}`);
+      return { success: true, messageId: res.data?.id, live: true };
+    } catch (err) {
+      console.error(`[mailer] Resend dispatch failed to ${to}:`, err.message);
+    }
+  }
 
+  // 2. Fallback to Gmail SMTP if configured
   if (transporter) {
+    const mailOptions = {
+      from: `"${FROM_NAME}" <${GMAIL_USER || 'no-reply@wj-wellness.com'}>`,
+      to,
+      subject,
+      text: text || '',
+      html
+    };
     try {
       const info = await transporter.sendMail(mailOptions);
       console.log(`[mailer] Email successfully sent to ${to}: ${info.messageId}`);
@@ -42,15 +72,16 @@ async function sendMail({ to, subject, html, text }) {
       console.error(`[mailer] Failed to send email to ${to}:`, err.message);
       return { success: false, error: err.message, live: false };
     }
-  } else {
-    console.log(`\n======================================================`);
-    console.log(`[MAILER NOTIFICATION DISPATCHED (Simulation Mode)]`);
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Body:\n${text || 'HTML Content'}`);
-    console.log(`======================================================\n`);
-    return { success: true, live: false, simulated: true };
   }
+
+  // 3. Simulation mode if no keys configured
+  console.log(`\n======================================================`);
+  console.log(`[MAILER NOTIFICATION DISPATCHED (Simulation Mode)]`);
+  console.log(`To: ${to}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Body:\n${text || 'HTML Content'}`);
+  console.log(`======================================================\n`);
+  return { success: true, live: false, simulated: true };
 }
 
 /**
