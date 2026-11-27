@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://wj-wellness-spa.onrender.com/api/:path*"
+    },
+    {
+      "source": "/samples/:path*",
+      "destination": "https://wj-wellness-spa.onrender.com/samples/:path*"
+    },
+    {
+      "source": "/wj-logo.png",
+      "destination": "https://wj-wellness-spa.onrender.com/wj-logo.png"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
