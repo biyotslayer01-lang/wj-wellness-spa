@@ -19,7 +19,6 @@ export const NAV_ITEMS = [
   { id: 'customers', label: 'Customers', icon: Users, roles: ['owner', 'admin', 'receptionist'] },
   { id: 'therapists', label: 'Therapists', icon: Stethoscope, roles: ['owner', 'admin', 'receptionist'] },
   { id: 'services', label: 'Services & prices', icon: Sparkles, roles: ['owner', 'admin'] },
-  { id: 'inventory', label: 'Inventory', icon: Boxes, roles: ['owner', 'admin', 'receptionist'] },
   { id: 'transactions', label: 'Transactions', icon: Wallet, roles: ['owner', 'admin', 'receptionist'] },
   { id: 'reports', label: 'Sales reports', icon: FileBarChart2, roles: ['owner', 'admin'] },
   { id: 'users', label: 'User accounts', icon: UserCog, roles: ['owner', 'admin'] }
@@ -29,11 +28,10 @@ export const PAGE_TITLES = {
   dashboard: ['Good day', 'Here is what is happening at your branch today.'],
   appointments: ['Appointments', 'Manage reservations, walk-ins, and therapist schedules.'],
   customers: ['Customer directory', 'Keep customer details organized and easy to retrieve.'],
-  therapists: ['Therapist management', 'Manage therapist profiles and monitor their assigned workload.'],
+  therapists: ['Therapist management', 'Manage therapist profiles, attendance (ABSENT/PRESENT), and workloads.'],
   services: ['Services & pricing', 'Maintain the services offered by your branch.'],
-  inventory: ['Inventory control', 'Monitor supplies, stock movements, and low-stock items.'],
   transactions: ['Transactions', 'Record customer payments and review transaction history.'],
-  reports: ['Sales reports', 'Review recorded sales by day, week, or month.'],
+  reports: ['Sales reports', 'Review recorded sales, therapist commissions (30%), and spa revenue (70%).'],
   users: ['User accounts', 'Control access based on each team member’s responsibilities.']
 };
 
@@ -146,7 +144,17 @@ export function Toast({ toast, onClose }) {
   );
 }
 
-export function PageHeading({ kicker = 'BRANCH OPERATIONS', title, description, action, actionLabel, actionIcon: ActionIcon = Plus }) {
+export function PageHeading({
+  kicker = 'BRANCH OPERATIONS',
+  title,
+  description,
+  action,
+  actionLabel,
+  actionIcon: ActionIcon = Plus,
+  secondaryAction,
+  secondaryActionLabel,
+  secondaryActionIcon: SecondaryActionIcon = Plus
+}) {
   return (
     <div className="page-heading">
       <div>
@@ -154,11 +162,23 @@ export function PageHeading({ kicker = 'BRANCH OPERATIONS', title, description, 
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-      {action && (
-        <button className="primary-button heading-action" onClick={action}>
-          <ActionIcon size={17} /> {actionLabel}
-        </button>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {secondaryAction && (
+          <button
+            type="button"
+            className="secondary-button heading-action"
+            onClick={secondaryAction}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <SecondaryActionIcon size={17} /> {secondaryActionLabel}
+          </button>
+        )}
+        {action && (
+          <button className="primary-button heading-action" onClick={action}>
+            <ActionIcon size={17} /> {actionLabel}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

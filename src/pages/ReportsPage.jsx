@@ -125,18 +125,33 @@ export function ReportsPage({ refreshKey }) {
                   <th>THERAPIST</th>
                   <th>SERVICES COMPLETED</th>
                   <th>TOTAL SERVICE REVENUE</th>
-                  <th>ESTIMATED COMMISSION (30%)</th>
+                  <th>THERAPIST SHARE (30% SAHOD)</th>
+                  <th>SPA SHARE (70%)</th>
                 </tr>
               </thead>
               <tbody>
-                {data.therapistStats.map((t) => (
-                  <tr key={t.id}>
-                    <td><strong className="cell-primary">{t.name}</strong></td>
-                    <td><span className="visit-count">{t.services_completed}</span></td>
-                    <td><strong className="cell-primary">{money(t.total_revenue)}</strong></td>
-                    <td><span className="therapist-commission-badge">{money(Number(t.total_revenue) * 0.3)}</span></td>
-                  </tr>
-                ))}
+                {data.therapistStats.map((t) => {
+                  const rev = Number(t.total_revenue || 0);
+                  const therapistComm = rev * 0.3;
+                  const spaShare = rev * 0.7;
+                  return (
+                    <tr key={t.id}>
+                      <td><strong className="cell-primary">{t.name}</strong></td>
+                      <td><span className="visit-count">{t.services_completed}</span></td>
+                      <td><strong className="cell-primary">{money(rev)}</strong></td>
+                      <td>
+                        <span className="therapist-commission-badge" style={{ background: '#e8f5e9', color: '#1b5e20', border: '1px solid #c8e6c9', fontWeight: 800 }}>
+                          {money(therapistComm)} (30%)
+                        </span>
+                      </td>
+                      <td>
+                        <strong style={{ color: '#881c2d', fontWeight: 700 }}>
+                          {money(spaShare)} (70%)
+                        </strong>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

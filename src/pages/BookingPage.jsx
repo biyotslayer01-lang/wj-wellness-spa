@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Clock3, ShieldCheck, Check, AlertCircle } from 'lucide-react';
+import { ArrowRight, Clock3, ShieldCheck, Check, AlertCircle, DoorOpen, User, Users } from 'lucide-react';
 import { Field, MapPinIcon, useApiData } from '../components/Common';
 import { api, money, todayString } from '../api';
 import { ThemeToggle } from '../context/ThemeContext';
@@ -41,6 +41,7 @@ export function BookingPage({ notify }) {
     email: '',
     service_id: '',
     therapist_id: '',
+    has_room: false,
     appointment_date: todayString(),
     start_time: '14:00',
     notes: ''
@@ -64,6 +65,8 @@ export function BookingPage({ notify }) {
   // Price calculation
   const selectedService = services.find((s) => String(s.id) === String(form.service_id));
   const servicePrice = Number(selectedService?.price || 0);
+  const roomPrice = form.has_room ? 100 : 0;
+  const estimatedTotal = servicePrice + roomPrice;
   const estimatedDuration = selectedService?.duration_minutes || 60;
 
   // Check 2:00 PM to 3:00 AM operating hours
@@ -435,8 +438,8 @@ export function BookingPage({ notify }) {
                 <div style={{ fontSize: '0.92rem', color: '#68454b', lineHeight: 1.6 }}>
                   <div>📅 Date: <strong>{form.appointment_date}</strong> at <strong>{form.start_time}</strong></div>
                   <div>💆 Service: <strong>{selectedService?.name || 'Selected Spa Service'}</strong></div>
-                  {selectedAddons.length > 0 && (
-                    <div>✨ Add-ons: <strong>{selectedAddons.map((a) => a.name).join(', ')}</strong></div>
+                  {form.has_room && (
+                    <div>🚪 Private Room: <strong>Availing Private Room (+₱100)</strong></div>
                   )}
                   {estimatedTotal > 0 && (
                     <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #dfbec4', fontWeight: 800, color: '#881c2d' }}>
@@ -507,14 +510,221 @@ export function BookingPage({ notify }) {
                   </div>
                 )}
 
-                <Field
-                  label="Preferred therapist (optional)"
-                  type="select"
-                  value={form.therapist_id}
-                  onChange={(v) => update('therapist_id', v)}
-                  options={therapists.map((t) => ({ value: String(t.id), label: t.name }))}
-                  placeholder="No preference / Any available therapist"
-                />
+                {/* ROOM OPTION ADD-ON (+100 PHP) */}
+                <div style={{
+                  margin: '16px 0',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  border: form.has_room ? '2px solid #881c2d' : '1px solid var(--border-color, #e0d5d5)',
+                  background: form.has_room ? 'rgba(136, 28, 45, 0.05)' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }} onClick={() => update('has_room', !form.has_room)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: form.has_room ? '#881c2d' : '#f0e6e7',
+                      color: form.has_room ? '#ffffff' : '#881c2d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <DoorOpen size={22} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.96rem', color: 'var(--text-color, #2b1115)' }}>
+                        Avail Private Room (+₱100)
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: '#7a5a60' }}>
+                        Exclusive private VIP room for maximum relaxation &amp; privacy
+                      </div>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={form.has_room}
+                    onChange={(e) => update('has_room', e.target.checked)}
+                    style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#881c2d' }}
+                  />
+                </div>
+
+                {/* THERAPIST SELECTION: REDESIGNED WITH MALE & FEMALE POV / CARDS & ABSENT BADGE */}
+                <div style={{ marginTop: '20px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-color, #333)' }}>
+                      Select Preferred Therapist (Optional)
+                    </label>
+                    {form.therapist_id && (
+                      <button
+                        type="button"
+                        onClick={() => update('therapist_id', '')}
+                        style={{ background: 'none', border: 'none', color: '#881c2d', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Reset preference
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Female Therapists */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.06em', color: '#a62438', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span>🌸 FEMALE THERAPISTS</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                      {therapists.filter((t) => t.gender === 'female' || !t.gender).map((t) => {
+                        const isAbsent = Boolean(t.is_absent);
+                        const isSelected = String(form.therapist_id) === String(t.id);
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => {
+                              if (isAbsent) {
+                                notify(`${t.name} is currently ABSENT today and cannot be selected.`, 'error');
+                                return;
+                              }
+                              update('therapist_id', isSelected ? '' : String(t.id));
+                            }}
+                            style={{
+                              padding: '10px 8px',
+                              borderRadius: '10px',
+                              border: isSelected ? '2px solid #881c2d' : '1px solid var(--border-color, #e4d7d7)',
+                              background: isAbsent ? '#fbf4f4' : (isSelected ? 'rgba(136, 28, 45, 0.08)' : 'var(--card-bg, #ffffff)'),
+                              cursor: isAbsent ? 'not-allowed' : 'pointer',
+                              opacity: isAbsent ? 0.6 : 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              position: 'relative',
+                              transition: 'all 0.2s ease',
+                              boxShadow: isSelected ? '0 2px 8px rgba(136, 28, 45, 0.18)' : 'none'
+                            }}
+                          >
+                            <div style={{
+                              width: '34px',
+                              height: '34px',
+                              borderRadius: '50%',
+                              background: isAbsent ? '#dcd1d1' : (isSelected ? '#881c2d' : '#f7ebee'),
+                              color: isSelected ? '#ffffff' : '#881c2d',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                              marginBottom: '6px'
+                            }}>
+                              {t.name.charAt(0)}
+                            </div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isAbsent ? '#888' : 'var(--text-color, #333)' }}>
+                              {t.name}
+                            </span>
+                            {isAbsent ? (
+                              <span style={{
+                                marginTop: '4px',
+                                background: '#e53935',
+                                color: '#ffffff',
+                                fontSize: '0.66rem',
+                                fontWeight: 800,
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                letterSpacing: '0.04em'
+                              }}>
+                                ABSENT
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', color: isSelected ? '#881c2d' : '#8c7075', marginTop: '2px' }}>
+                                {isSelected ? '✓ Selected' : 'Available'}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Male Therapists */}
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.06em', color: '#1b5e8c', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span>🌿 MALE THERAPISTS</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                      {therapists.filter((t) => t.gender === 'male').map((t) => {
+                        const isAbsent = Boolean(t.is_absent);
+                        const isSelected = String(form.therapist_id) === String(t.id);
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => {
+                              if (isAbsent) {
+                                notify(`${t.name} is currently ABSENT today and cannot be selected.`, 'error');
+                                return;
+                              }
+                              update('therapist_id', isSelected ? '' : String(t.id));
+                            }}
+                            style={{
+                              padding: '10px 8px',
+                              borderRadius: '10px',
+                              border: isSelected ? '2px solid #1b5e8c' : '1px solid var(--border-color, #d7e0e4)',
+                              background: isAbsent ? '#f4f7f8' : (isSelected ? 'rgba(27, 94, 140, 0.08)' : 'var(--card-bg, #ffffff)'),
+                              cursor: isAbsent ? 'not-allowed' : 'pointer',
+                              opacity: isAbsent ? 0.6 : 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              position: 'relative',
+                              transition: 'all 0.2s ease',
+                              boxShadow: isSelected ? '0 2px 8px rgba(27, 94, 140, 0.18)' : 'none'
+                            }}
+                          >
+                            <div style={{
+                              width: '34px',
+                              height: '34px',
+                              borderRadius: '50%',
+                              background: isAbsent ? '#d1d8dc' : (isSelected ? '#1b5e8c' : '#ebf2f7'),
+                              color: isSelected ? '#ffffff' : '#1b5e8c',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                              marginBottom: '6px'
+                            }}>
+                              {t.name.charAt(0)}
+                            </div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isAbsent ? '#888' : 'var(--text-color, #333)' }}>
+                              {t.name}
+                            </span>
+                            {isAbsent ? (
+                              <span style={{
+                                marginTop: '4px',
+                                background: '#e53935',
+                                color: '#ffffff',
+                                fontSize: '0.66rem',
+                                fontWeight: 800,
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                letterSpacing: '0.04em'
+                              }}>
+                                ABSENT
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.7rem', color: isSelected ? '#1b5e8c' : '#6b7f8c', marginTop: '2px' }}>
+                                {isSelected ? '✓ Selected' : 'Available'}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
 
                 <Field label="Special requests or medical notes (optional)" type="textarea" value={form.notes} onChange={(v) => update('notes', v)} placeholder="e.g. Focus on lower back, prefer gentle pressure, Home/Hotel address, etc." />
 
@@ -529,6 +739,18 @@ export function BookingPage({ notify }) {
                         {money(servicePrice)}
                       </strong>
                     </div>
+                    {form.has_room && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '0.88rem', color: '#881c2d', fontWeight: 600 }}>
+                        <span>Private Room Add-on</span>
+                        <span>+₱100.00</span>
+                      </div>
+                    )}
+                    {form.has_room && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #ebdcdb', fontSize: '1.05rem', fontWeight: 800 }}>
+                        <span>Total Estimated</span>
+                        <span style={{ color: '#881c2d' }}>{money(estimatedTotal)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 

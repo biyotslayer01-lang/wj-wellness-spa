@@ -247,7 +247,7 @@ app.get('/api/public/services', (_req, res) => {
   res.json({ services });
 });
 app.get('/api/public/therapists', (_req, res) => {
-  const therapists = db.prepare('SELECT id,name FROM therapists WHERE active = 1 ORDER BY name').all();
+  const therapists = db.prepare('SELECT id,name,gender,is_absent FROM therapists WHERE active = 1 ORDER BY gender ASC, name ASC').all();
   res.json({ therapists });
 });
 app.post('/api/public/appointments', (req, res) => {
@@ -260,14 +260,22 @@ app.post('/api/public/appointments', (req, res) => {
   const date = String(req.body?.appointment_date || '');
   const startTime = String(req.body?.start_time || '');
   const notes = String(req.body?.notes || '').trim();
+  const hasRoom = req.body?.has_room ? 1 : 0;
+  const roomFee = hasRoom ? 100 : 0;
   if (!fullName || fullName.length > 120 || cleanPhone.length !== 11 || !Number.isInteger(serviceId) || !validDate(date) || !validTime(startTime)) {
     return res.status(400).json({ error: 'Please provide a valid 11-digit mobile number (e.g. 09XXXXXXXXX) and complete your booking details.' });
   }
   if (date < todayLocal()) return res.status(400).json({ error: 'Please choose today or a future date.' });
   const service = db.prepare('SELECT * FROM services WHERE id = ? AND active = 1').get(serviceId);
   if (!service) return res.status(400).json({ error: 'Please select an available service.' });
-  if (therapistId && !db.prepare('SELECT id FROM therapists WHERE id = ? AND active = 1').get(therapistId)) {
-    return res.status(400).json({ error: 'Please select an available therapist or leave the preference blank.' });
+  if (therapistId) {
+    const therapistRow = db.prepare('SELECT id, is_absent FROM therapists WHERE id = ? AND active = 1').get(therapistId);
+    if (!therapistRow) {
+      return res.status(400).json({ error: 'Please select an available therapist or leave the preference blank.' });
+    }
+    if (therapistRow.is_absent) {
+      return res.status(400).json({ error: 'The selected therapist is currently marked ABSENT today. Please choose another therapist.' });
+    }
   }
   const endTime = addMinutes(startTime, service.duration_minutes);
   if (!withinBusinessHours(date, startTime, endTime)) {
@@ -286,8 +294,8 @@ app.post('/api/public/appointments', (req, res) => {
     if (customerOverlaps(customerId, date, startTime, endTime)) throw new Error('CUSTOMER_CONFLICT');
     if (overlaps(therapistId, date, startTime, endTime)) throw new Error('THERAPIST_CONFLICT');
     const result = db.prepare(`INSERT INTO appointments
-      (customer_id,service_id,therapist_id,appointment_date,start_time,end_time,status,source,notes)
-      VALUES (?,?,?,?,?,?,'pending','online',?)`).run(customerId, serviceId, therapistId, date, startTime, endTime, notes);
+      (customer_id,service_id,therapist_id,appointment_date,start_time,end_time,status,source,notes,has_room,room_fee)
+      VALUES (?,?,?,?,?,?,'pending','online',?,?,?)`).run(customerId, serviceId, therapistId, date, startTime, endTime, notes, hasRoom, roomFee);
     return result.lastInsertRowid;
   });
   try {
@@ -363,14 +371,15 @@ app.get('/api/therapists', (req, res) => {
   if (!['owner', 'admin', 'receptionist', 'therapist'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied.' });
   const therapists = req.user.role === 'therapist'
     ? db.prepare(`SELECT t.*, (SELECT COUNT(*) FROM appointments a WHERE a.therapist_id=t.id AND a.status IN ('pending','confirmed')) AS active_appointments FROM therapists t WHERE t.id=?`).all(req.user.therapist_id)
-    : db.prepare(`SELECT t.*, (SELECT COUNT(*) FROM appointments a WHERE a.therapist_id=t.id AND a.status IN ('pending','confirmed')) AS active_appointments FROM therapists t ORDER BY t.name`).all();
+    : db.prepare(`SELECT t.*, (SELECT COUNT(*) FROM appointments a WHERE a.therapist_id=t.id AND a.status IN ('pending','confirmed')) AS active_appointments FROM therapists t ORDER BY t.gender ASC, t.name ASC`).all();
   res.json({ therapists });
 });
 app.post('/api/therapists', managers, (req, res) => {
   const name = String(req.body?.name || '').trim();
   const phone = String(req.body?.phone || '').trim();
+  const gender = req.body?.gender === 'male' ? 'male' : 'female';
   if (!name || name.length > 120) return res.status(400).json({ error: 'Enter a therapist name.' });
-  const result = db.prepare('INSERT INTO therapists (name,phone) VALUES (?,?)').run(name, phone);
+  const result = db.prepare('INSERT INTO therapists (name,phone,gender,is_absent) VALUES (?,?,?,0)').run(name, phone, gender);
   audit(req.user.id, 'CREATE', 'therapist', result.lastInsertRowid, name);
   res.status(201).json({ message: 'Therapist added successfully.' });
 });
@@ -378,12 +387,25 @@ app.put('/api/therapists/:id', managers, (req, res) => {
   const id = Number(req.params.id);
   const name = String(req.body?.name || '').trim();
   const phone = String(req.body?.phone || '').trim();
+  const gender = req.body?.gender === 'male' ? 'male' : 'female';
   const active = req.body?.active === false ? 0 : 1;
+  const isAbsent = req.body?.is_absent ? 1 : 0;
   if (!name || name.length > 120) return res.status(400).json({ error: 'Enter a therapist name.' });
-  const result = db.prepare('UPDATE therapists SET name=?,phone=?,active=? WHERE id=?').run(name, phone, active, id);
+  const result = db.prepare('UPDATE therapists SET name=?,phone=?,gender=?,active=?,is_absent=? WHERE id=?').run(name, phone, gender, active, isAbsent, id);
   if (!result.changes) return res.status(404).json({ error: 'Therapist not found.' });
-  audit(req.user.id, 'UPDATE', 'therapist', id, name);
+  audit(req.user.id, 'UPDATE', 'therapist', id, `${name} (absent=${isAbsent})`);
   res.json({ message: 'Therapist updated successfully.' });
+});
+
+// Dedicated quick toggle for Attendance (ABSENT / PRESENT)
+app.patch('/api/therapists/:id/attendance', staff, (req, res) => {
+  const id = Number(req.params.id);
+  const therapist = db.prepare('SELECT id, name, is_absent FROM therapists WHERE id = ?').get(id);
+  if (!therapist) return res.status(404).json({ error: 'Therapist not found.' });
+  const newStatus = req.body?.is_absent !== undefined ? (req.body.is_absent ? 1 : 0) : (therapist.is_absent ? 0 : 1);
+  db.prepare('UPDATE therapists SET is_absent = ? WHERE id = ?').run(newStatus, id);
+  audit(req.user.id, 'ATTENDANCE', 'therapist', id, `${therapist.name} marked ${newStatus ? 'ABSENT' : 'PRESENT'}`);
+  res.json({ message: `${therapist.name} is now marked ${newStatus ? 'ABSENT' : 'PRESENT'}.`, is_absent: newStatus });
 });
 
 // Services
@@ -434,21 +456,24 @@ app.post('/api/appointments', staff, (req, res) => {
   const therapistId = req.body?.therapist_id ? Number(req.body.therapist_id) : null;
   const date = String(req.body?.appointment_date || '');
   const startTime = String(req.body?.start_time || '');
-  const source = req.body?.source === 'walk-in' ? 'walk-in' : 'staff';
+  const source = req.body?.source === 'walk-in' ? 'walk-in' : (req.body?.source === 'online' ? 'online' : 'staff');
   const notes = String(req.body?.notes || '').trim();
+  const hasRoom = req.body?.has_room ? 1 : 0;
+  const roomFee = hasRoom ? 100 : 0;
   if (!Number.isInteger(customerId) || !Number.isInteger(serviceId) || !validDate(date) || !validTime(startTime)) return res.status(400).json({ error: 'Choose a customer, service, date, and start time.' });
   const customer = db.prepare('SELECT id FROM customers WHERE id=?').get(customerId);
   const service = db.prepare('SELECT * FROM services WHERE id=? AND active=1').get(serviceId);
-  const therapist = therapistId ? db.prepare('SELECT id FROM therapists WHERE id=? AND active=1').get(therapistId) : null;
+  const therapist = therapistId ? db.prepare('SELECT id, is_absent FROM therapists WHERE id=? AND active=1').get(therapistId) : null;
   if (!customer || !service || (therapistId && !therapist)) return res.status(400).json({ error: 'One of the selected records is unavailable.' });
+  if (therapist && therapist.is_absent) return res.status(400).json({ error: 'The selected therapist is currently marked ABSENT today.' });
   const endTime = addMinutes(startTime, service.duration_minutes);
   if (!withinBusinessHours(date, startTime, endTime)) return res.status(400).json({ error: 'Appointments must fit within branch hours: 2:00 PM to 3:00 AM daily.' });
   if (customerOverlaps(customerId, date, startTime, endTime)) return res.status(409).json({ error: 'This customer already has an appointment during that time.' });
   if (overlaps(therapistId, date, startTime, endTime)) return res.status(409).json({ error: 'The selected therapist is already booked during that time.' });
-  const result = db.prepare(`INSERT INTO appointments (customer_id,service_id,therapist_id,appointment_date,start_time,end_time,status,source,notes,created_by)
-    VALUES (?,?,?,?,?,?,'pending',?,?,?)`).run(customerId, serviceId, therapistId, date, startTime, endTime, source, notes, req.user.id);
-  audit(req.user.id, 'CREATE', 'appointment', result.lastInsertRowid, `${date} ${startTime}`);
-  res.status(201).json({ message: 'Appointment created successfully.' });
+  const result = db.prepare(`INSERT INTO appointments (customer_id,service_id,therapist_id,appointment_date,start_time,end_time,status,source,notes,has_room,room_fee,created_by)
+    VALUES (?,?,?,?,?,?,'pending',?,?,?,?,?)`).run(customerId, serviceId, therapistId, date, startTime, endTime, source, notes, hasRoom, roomFee, req.user.id);
+  audit(req.user.id, 'CREATE', 'appointment', result.lastInsertRowid, `${date} ${startTime} (${source})`);
+  res.status(201).json({ message: 'Appointment created successfully.', appointment_id: result.lastInsertRowid });
 });
 app.patch('/api/appointments/:id', staff, (req, res) => {
   const id = Number(req.params.id);
@@ -592,7 +617,7 @@ app.post('/api/payments', staff, (req, res) => {
   if (!['confirmed','completed'].includes(appointment.status)) return res.status(400).json({ error: 'Confirm the appointment before recording its payment.' });
   if (db.prepare('SELECT id FROM payments WHERE appointment_id=?').get(appointmentId)) return res.status(409).json({ error: 'A payment is already recorded for this appointment.' });
   if (!['Cash','GCash','Maya','Card','Other'].includes(method)) return res.status(400).json({ error: 'Choose a valid payment method.' });
-  const amount = req.body?.amount === undefined || req.body?.amount === '' ? Number(appointment.price) : Number(req.body.amount);
+  const amount = req.body?.amount === undefined || req.body?.amount === '' ? (Number(appointment.price) + Number(appointment.room_fee || 0)) : Number(req.body.amount);
   if (!Number.isFinite(amount) || amount < 0) return res.status(400).json({ error: 'Enter a valid payment amount.' });
   const discountType = String(req.body?.discount_type || 'None');
   const discountAmount = Number(req.body?.discount_amount || 0);

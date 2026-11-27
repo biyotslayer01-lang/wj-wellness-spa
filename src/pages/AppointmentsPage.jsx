@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   CalendarDays, Clock3, BadgeCheck, Search, Check, X, ArrowRight,
-  Pencil, CheckCircle2, LayoutGrid, List, Bell
+  Pencil, CheckCircle2, LayoutGrid, List, Bell, DoorOpen, UserPlus, Footprints
 } from 'lucide-react';
 import {
   PageHeading, StatusPill, EmptyState, LoadingLine, InlineError, Modal, Field, useApiData
@@ -17,7 +17,9 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'timeline'
   const [selectedTimelineDate, setSelectedTimelineDate] = useState(todayString());
   const [showModal, setShowModal] = useState(false);
+  const [showWalkinModal, setShowWalkinModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
+  const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'walk-in' | 'online' | 'staff'
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
@@ -27,6 +29,21 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
     appointment_date: todayString(),
     start_time: '14:00',
     source: 'staff',
+    has_room: false,
+    notes: ''
+  });
+  const [walkinForm, setWalkinForm] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    service_id: '',
+    therapist_id: '',
+    appointment_date: todayString(),
+    start_time: (() => {
+      const d = new Date();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    })(),
+    has_room: false,
     notes: ''
   });
   const [editForm, setEditForm] = useState({
@@ -41,15 +58,21 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
 
   const canManage = ['owner', 'admin', 'receptionist'].includes(user.role);
   const rawAppointments = data?.appointments || [];
-  const appointments = rawAppointments.filter((a) =>
-    (filter === 'all' || a.status === filter) &&
-    `${a.customer_name} ${a.service_name} ${a.therapist_name || ''}`.toLowerCase().includes(search.toLowerCase())
-  );
+  const appointments = rawAppointments.filter((a) => {
+    const matchesFilter = filter === 'all' || a.status === filter;
+    const matchesSource = sourceFilter === 'all' ||
+      (sourceFilter === 'walk-in' && a.source === 'walk-in') ||
+      (sourceFilter === 'online' && (a.source === 'online' || a.source === 'staff'));
+    const matchesSearch = `${a.customer_name} ${a.service_name} ${a.therapist_name || ''}`.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSource && matchesSearch;
+  });
+
   const customers = customersData?.customers || [];
   const services = (serviceData?.services || []).filter((s) => s.active);
   const therapists = (therapistData?.therapists || []).filter((t) => t.active !== 0);
 
   const update = (key, value) => setForm((old) => ({ ...old, [key]: value }));
+  const updateWalkin = (key, value) => setWalkinForm((old) => ({ ...old, [key]: value }));
 
   const create = async (e) => {
     e.preventDefault();
@@ -65,6 +88,73 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
         appointment_date: todayString(),
         start_time: '14:00',
         source: 'staff',
+        has_room: false,
+        notes: ''
+      });
+      onChanged();
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createWalkin = async (e) => {
+    e.preventDefault();
+    const cleanPhone = (walkinForm.phone || '').replace(/\D/g, '');
+    if (!walkinForm.full_name.trim()) {
+      notify('Please enter the customer name.', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      // Step 1: create or find customer
+      let customerId;
+      const existing = customers.find((c) => cleanPhone && c.phone === cleanPhone);
+      if (existing) {
+        customerId = existing.id;
+      } else {
+        const custRes = await api('/api/customers', {
+          method: 'POST',
+          body: JSON.stringify({
+            full_name: walkinForm.full_name,
+            phone: cleanPhone || '09000000000',
+            email: walkinForm.email || '',
+            notes: 'Walk-in customer'
+          })
+        });
+        // fetch newly added customer or fallback
+        const updatedCust = await api('/api/customers');
+        const newlyAdded = (updatedCust?.customers || []).find((c) => c.full_name === walkinForm.full_name);
+        customerId = newlyAdded?.id || custRes?.customer_id;
+      }
+
+      // Step 2: create appointment with walk-in source
+      await api('/api/appointments', {
+        method: 'POST',
+        body: JSON.stringify({
+          customer_id: customerId,
+          service_id: Number(walkinForm.service_id),
+          therapist_id: walkinForm.therapist_id ? Number(walkinForm.therapist_id) : null,
+          appointment_date: walkinForm.appointment_date,
+          start_time: walkinForm.start_time,
+          source: 'walk-in',
+          has_room: walkinForm.has_room,
+          notes: walkinForm.notes
+        })
+      });
+
+      notify('Walk-in appointment logged successfully!');
+      setShowWalkinModal(false);
+      setWalkinForm({
+        full_name: '',
+        phone: '',
+        email: '',
+        service_id: '',
+        therapist_id: '',
+        appointment_date: todayString(),
+        start_time: '14:00',
+        has_room: false,
         notes: ''
       });
       onChanged();
@@ -146,30 +236,94 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
     <>
       <PageHeading
         title="Appointments & scheduling"
-        description="Review customer requests, assign therapists, and keep every booking on track."
+        description="Review customer requests, separate walk-ins vs reservations, and manage private rooms."
         action={canManage ? () => setShowModal(true) : null}
         actionLabel="Add appointment"
+        secondaryAction={canManage ? () => setShowWalkinModal(true) : null}
+        secondaryActionLabel="+ New Walk-in"
+        secondaryActionIcon={Footprints}
       />
 
       <div className="summary-strip">
         <div><CalendarDays size={17} /><span><strong>{rawAppointments.length}</strong> total records</span></div>
+        <div><Footprints size={17} /><span><strong>{rawAppointments.filter((a) => a.source === 'walk-in').length}</strong> walk-ins</span></div>
         <div><Clock3 size={17} /><span><strong>{rawAppointments.filter((a) => a.status === 'pending').length}</strong> pending review</span></div>
         <div><BadgeCheck size={17} /><span><strong>{rawAppointments.filter((a) => a.status === 'confirmed').length}</strong> confirmed</span></div>
       </div>
 
-      <div className="view-toggle-bar">
-        <button
-          className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-          onClick={() => setViewMode('list')}
-        >
-          <List size={16} /> Table List
-        </button>
-        <button
-          className={`view-btn ${viewMode === 'timeline' ? 'active' : ''}`}
-          onClick={() => setViewMode('timeline')}
-        >
-          <LayoutGrid size={16} /> Therapist Daily Timeline
-        </button>
+      <div className="view-toggle-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+            onClick={() => setViewMode('list')}
+          >
+            <List size={16} /> Table List
+          </button>
+          <button
+            className={`view-btn ${viewMode === 'timeline' ? 'active' : ''}`}
+            onClick={() => setViewMode('timeline')}
+          >
+            <LayoutGrid size={16} /> Therapist Daily Timeline
+          </button>
+        </div>
+
+        {/* WALK-IN VS ONLINE/RESERVATION FILTER */}
+        <div style={{ display: 'flex', gap: '6px', background: 'var(--card-bg, #ffffff)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-color, #e0d0d2)' }}>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('all')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              border: 'none',
+              cursor: 'pointer',
+              background: sourceFilter === 'all' ? '#881c2d' : 'transparent',
+              color: sourceFilter === 'all' ? '#ffffff' : 'inherit'
+            }}
+          >
+            All Bookings
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('walk-in')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              border: 'none',
+              cursor: 'pointer',
+              background: sourceFilter === 'walk-in' ? '#881c2d' : 'transparent',
+              color: sourceFilter === 'walk-in' ? '#ffffff' : 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Footprints size={14} /> Walk-in Only
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('online')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              border: 'none',
+              cursor: 'pointer',
+              background: sourceFilter === 'online' ? '#881c2d' : 'transparent',
+              color: sourceFilter === 'online' ? '#ffffff' : 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <CalendarDays size={14} /> Online / Reservation
+          </button>
+        </div>
       </div>
 
       {viewMode === 'list' ? (
@@ -199,9 +353,9 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
               <table>
                 <thead>
                   <tr>
-                    <th>CUSTOMER</th>
-                    <th>SERVICE</th>
-                    <th>DATE & TIME</th>
+                    <th>TYPE &amp; CUSTOMER</th>
+                    <th>SERVICE &amp; ROOM</th>
+                    <th>DATE &amp; TIME</th>
                     <th>THERAPIST</th>
                     <th>STATUS</th>
                     <th>PAYMENT</th>
@@ -212,6 +366,18 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
                   {appointments.map((item) => (
                     <tr key={item.id}>
                       <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            background: item.source === 'walk-in' ? 'rgba(230, 81, 0, 0.12)' : 'rgba(136, 28, 45, 0.12)',
+                            color: item.source === 'walk-in' ? '#e65100' : '#881c2d'
+                          }}>
+                            {item.source === 'walk-in' ? '🚶 WALK-IN' : '📅 RESERVATION'}
+                          </span>
+                        </div>
                         <div className="cell-primary">{item.customer_name}</div>
                         <div className="cell-muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <span>{item.customer_phone || 'No phone'}</span>
@@ -236,7 +402,14 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
                           </div>
                           <div>
                             <div className="cell-primary">{item.service_name}</div>
-                            <div className="cell-muted">{money(item.service_price)}</div>
+                            <div className="cell-muted">
+                              {money(item.service_price)}
+                              {Boolean(item.has_room) && (
+                                <span style={{ marginLeft: '6px', color: '#881c2d', fontWeight: 700, fontSize: '0.76rem', background: 'rgba(136, 28, 45, 0.08)', padding: '2px 5px', borderRadius: '4px' }}>
+                                  + Room (₱100)
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -449,13 +622,126 @@ export function AppointmentsPage({ user, refreshKey, onChanged, notify }) {
               />
               <Field label="Appointment date" type="date" required min={todayString()} value={form.appointment_date} onChange={(v) => update('appointment_date', v)} />
               <Field label="Start time" type="time" required value={form.start_time} onChange={(v) => update('start_time', v)} />
-              <Field label="Assign therapist" type="select" value={form.therapist_id} onChange={(v) => update('therapist_id', v)} options={therapists.map((t) => ({ value: String(t.id), label: t.name }))} placeholder="Assign later" />
+              <Field label="Assign therapist" type="select" value={form.therapist_id} onChange={(v) => update('therapist_id', v)} options={therapists.map((t) => ({ value: String(t.id), label: `${t.name} (${t.gender || 'female'})${t.is_absent ? ' [ABSENT]' : ''}` }))} placeholder="Assign later" />
               <Field label="Booking type" type="select" value={form.source} onChange={(v) => update('source', v)} options={[{ value: 'staff', label: 'Reserved / staff entry' }, { value: 'walk-in', label: 'Walk-in' }]} />
             </div>
+
+            {/* Room Add-on checkbox in Add Appointment */}
+            <div style={{
+              margin: '12px 0',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              border: form.has_room ? '2px solid #881c2d' : '1px solid var(--border-color, #e0d5d5)',
+              background: form.has_room ? 'rgba(136, 28, 45, 0.05)' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer'
+            }} onClick={() => update('has_room', !form.has_room)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <DoorOpen size={20} color={form.has_room ? '#881c2d' : '#666'} />
+                <div>
+                  <strong style={{ fontSize: '0.92rem' }}>Avail Private Room (+₱100)</strong>
+                  <div style={{ fontSize: '0.78rem', color: '#777' }}>Additional ₱100 fee added to the customer's total</div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={form.has_room}
+                onChange={(e) => update('has_room', e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#881c2d' }}
+              />
+            </div>
+
             <Field label="Notes (optional)" type="textarea" value={form.notes} onChange={(v) => update('notes', v)} placeholder="Add appointment notes" />
             <div className="modal-actions">
               <button type="button" className="secondary-button" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="primary-button" disabled={saving}>{saving ? 'Saving...' : 'Create appointment'} <ArrowRight size={16} /></button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* DEDICATED WALK-IN INTAKE MODAL */}
+      {showWalkinModal && (
+        <Modal title="Log Walk-in Customer" subtitle="Quickly record a customer who arrived in the branch." onClose={() => setShowWalkinModal(false)} wide>
+          <form onSubmit={createWalkin} className="modal-form">
+            <div style={{ background: 'rgba(230, 81, 0, 0.06)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(230, 81, 0, 0.2)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Footprints size={18} color="#e65100" />
+              <span style={{ fontSize: '0.85rem', color: '#b23d00', fontWeight: 600 }}>
+                Walk-in intake: automatically registers new customers and assigns available therapists on duty.
+              </span>
+            </div>
+
+            <div className="form-grid two">
+              <Field
+                label="Customer Name"
+                required
+                value={walkinForm.full_name}
+                onChange={(v) => updateWalkin('full_name', v)}
+                placeholder="Full Name (e.g. Juan Dela Cruz)"
+              />
+              <Field
+                label="Mobile Number (Optional)"
+                value={walkinForm.phone}
+                onChange={(v) => updateWalkin('phone', v)}
+                placeholder="09XXXXXXXXX"
+              />
+              <Field
+                label="Service Availing"
+                type="select"
+                required
+                value={walkinForm.service_id}
+                onChange={(v) => updateWalkin('service_id', v)}
+                options={services.map((s) => ({ value: String(s.id), label: `${s.name} · ${money(s.price)}` }))}
+                placeholder="Choose service"
+              />
+              <Field
+                label="Therapist Preference"
+                type="select"
+                value={walkinForm.therapist_id}
+                onChange={(v) => updateWalkin('therapist_id', v)}
+                options={therapists.map((t) => ({ value: String(t.id), label: `${t.name} (${t.gender || 'female'})${t.is_absent ? ' [ABSENT]' : ''}` }))}
+                placeholder="Any available therapist"
+              />
+              <Field label="Date" type="date" required value={walkinForm.appointment_date} onChange={(v) => updateWalkin('appointment_date', v)} />
+              <Field label="Time In / Start Time" type="time" required value={walkinForm.start_time} onChange={(v) => updateWalkin('start_time', v)} />
+            </div>
+
+            {/* Room Add-on checkbox in Walk-in modal */}
+            <div style={{
+              margin: '14px 0',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              border: walkinForm.has_room ? '2px solid #881c2d' : '1px solid var(--border-color, #e0d5d5)',
+              background: walkinForm.has_room ? 'rgba(136, 28, 45, 0.05)' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer'
+            }} onClick={() => updateWalkin('has_room', !walkinForm.has_room)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <DoorOpen size={20} color={walkinForm.has_room ? '#881c2d' : '#666'} />
+                <div>
+                  <strong style={{ fontSize: '0.92rem' }}>Avail Private Room (+₱100)</strong>
+                  <div style={{ fontSize: '0.78rem', color: '#777' }}>VIP Private room add-on for this walk-in customer</div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={walkinForm.has_room}
+                onChange={(e) => updateWalkin('has_room', e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#881c2d' }}
+              />
+            </div>
+
+            <Field label="Notes / Requests (Optional)" type="textarea" value={walkinForm.notes} onChange={(v) => updateWalkin('notes', v)} placeholder="Special requests, preferences, etc." />
+
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={() => setShowWalkinModal(false)}>Cancel</button>
+              <button className="primary-button" disabled={saving}>
+                {saving ? 'Saving...' : 'Confirm Walk-in'} <ArrowRight size={16} />
+              </button>
             </div>
           </form>
         </Modal>

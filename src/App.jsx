@@ -10,7 +10,6 @@ import { AppointmentsPage } from './pages/AppointmentsPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { TherapistsPage } from './pages/TherapistsPage';
 import { ServicesPage } from './pages/ServicesPage';
-import { InventoryPage } from './pages/InventoryPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
@@ -25,7 +24,6 @@ function PageRenderer({ page, user, refreshKey, onChanged, notify, setPage }) {
     case 'customers': return <CustomersPage {...props} />;
     case 'therapists': return <TherapistsPage {...props} />;
     case 'services': return <ServicesPage {...props} />;
-    case 'inventory': return <InventoryPage {...props} />;
     case 'transactions': return <TransactionsPage {...props} />;
     case 'reports': return <ReportsPage {...props} />;
     case 'users': return <UsersPage {...props} />;

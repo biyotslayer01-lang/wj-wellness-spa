@@ -118,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_paid_at ON payments(paid_at);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 `);
 
-// Migrations for discounts & reminders
+// Migrations for discounts, reminders, room availment & therapist status/gender
 try {
   const paymentCols = db.prepare("PRAGMA table_info(payments)").all().map((c) => c.name);
   if (!paymentCols.includes('discount_type')) {
@@ -132,8 +132,55 @@ try {
   if (!apptCols.includes('reminded_at')) {
     db.exec("ALTER TABLE appointments ADD COLUMN reminded_at TEXT DEFAULT NULL");
   }
+  if (!apptCols.includes('has_room')) {
+    db.exec("ALTER TABLE appointments ADD COLUMN has_room INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!apptCols.includes('room_fee')) {
+    db.exec("ALTER TABLE appointments ADD COLUMN room_fee REAL NOT NULL DEFAULT 0");
+  }
+
+  const therapistCols = db.prepare("PRAGMA table_info(therapists)").all().map((c) => c.name);
+  if (!therapistCols.includes('gender')) {
+    db.exec("ALTER TABLE therapists ADD COLUMN gender TEXT DEFAULT 'female'");
+  }
+  if (!therapistCols.includes('is_absent')) {
+    db.exec("ALTER TABLE therapists ADD COLUMN is_absent INTEGER NOT NULL DEFAULT 0");
+  }
 } catch (_err) {
   // columns already exist
+}
+
+// Ensure the exact WJ Wellness Spa therapist roster exists and is configured
+try {
+  const maleTherapists = ['STEPHEN', 'PAUL', 'JEROME', 'JAME', 'DYLAN', 'KYLE', 'TERRENCE'];
+  const femaleTherapists = ['QUEEN', 'ALLIAH', 'ROSE', 'ELLA', 'CHELSEA', 'CLAIRE'];
+
+  const findTherapist = db.prepare('SELECT id FROM therapists WHERE UPPER(name) = ?');
+  const insertTherapist = db.prepare('INSERT INTO therapists (name, phone, gender, is_absent, active) VALUES (?, ?, ?, 0, 1)');
+  const updateTherapist = db.prepare('UPDATE therapists SET gender = ?, active = 1 WHERE UPPER(name) = ?');
+
+  // Deactivate old placeholder therapists like "Therapist 1".."Therapist 7"
+  db.exec("UPDATE therapists SET active = 0 WHERE name LIKE 'Therapist %'");
+
+  for (const name of maleTherapists) {
+    const row = findTherapist.get(name);
+    if (!row) {
+      insertTherapist.run(name, '', 'male');
+    } else {
+      updateTherapist.run('male', name);
+    }
+  }
+
+  for (const name of femaleTherapists) {
+    const row = findTherapist.get(name);
+    if (!row) {
+      insertTherapist.run(name, '', 'female');
+    } else {
+      updateTherapist.run('female', name);
+    }
+  }
+} catch (e) {
+  console.error('Error synchronizing therapists:', e);
 }
 
 function seed() {

@@ -24,7 +24,6 @@ export function DashboardPage({ user, refreshKey, setPage }) {
         <StatCard label="Today's appointments" value={loading ? '—' : stats.todayAppointments ?? 0} detail="Scheduled for today" icon={CalendarDays} tone="green" />
         <StatCard label="Pending requests" value={loading ? '—' : stats.pendingAppointments ?? 0} detail="Awaiting staff review" icon={Clock3} tone="gold" />
         {!isTherapist && <StatCard label="Sales today" value={loading ? '—' : money(stats.salesToday)} detail="Recorded payments" icon={Banknote} tone="blue" />}
-        {!isTherapist && <StatCard label="Low-stock items" value={loading ? '—' : stats.lowStock ?? 0} detail="At or below minimum stock" icon={Package} tone="rose" />}
         {isTherapist && <StatCard label="My schedule" value={loading ? '—' : stats.todayAppointments ?? 0} detail="Appointments assigned today" icon={UserRound} tone="blue" />}
       </div>
       <div className="dashboard-grid">
