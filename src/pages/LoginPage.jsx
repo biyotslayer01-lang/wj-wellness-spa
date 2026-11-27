@@ -12,8 +12,8 @@ function generateRandomCode(length = 5) {
 }
 
 export function LoginPage({ onLogin, notify }) {
-  const [email, setEmail] = useState('owner@wjwellness.com');
-  const [password, setPassword] = useState('Owner@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [captchaCode, setCaptchaCode] = useState(() => generateRandomCode(5));
   const [captchaInput, setCaptchaInput] = useState('');
