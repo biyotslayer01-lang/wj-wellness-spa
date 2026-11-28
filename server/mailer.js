@@ -34,7 +34,25 @@ async function sendMail({ to, subject, html, text }) {
     return { success: false, reason: 'Invalid email address' };
   }
 
-  // 1. Try Resend if configured
+  // 1. Try Gmail SMTP first if configured (Sends to ANY customer without domain restrictions)
+  if (transporter) {
+    const mailOptions = {
+      from: `"${FROM_NAME}" <${GMAIL_USER}>`,
+      to,
+      subject,
+      text: text || '',
+      html
+    };
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`[mailer] Email successfully sent via Gmail to ${to}: ${info.messageId}`);
+      return { success: true, messageId: info.messageId, live: true, provider: 'gmail' };
+    } catch (err) {
+      console.error(`[mailer] Gmail SMTP dispatch failed to ${to}:`, err.message);
+    }
+  }
+
+  // 2. Try Resend if configured
   if (resendClient) {
     try {
       const res = await resendClient.emails.send({
@@ -49,27 +67,9 @@ async function sendMail({ to, subject, html, text }) {
         return { success: false, error: res.error.message, live: false };
       }
       console.log(`[mailer] Email successfully sent via Resend to ${to}: ${res.data?.id}`);
-      return { success: true, messageId: res.data?.id, live: true };
+      return { success: true, messageId: res.data?.id, live: true, provider: 'resend' };
     } catch (err) {
       console.error(`[mailer] Resend dispatch failed to ${to}:`, err.message);
-    }
-  }
-
-  // 2. Fallback to Gmail SMTP if configured
-  if (transporter) {
-    const mailOptions = {
-      from: `"${FROM_NAME}" <${GMAIL_USER || 'no-reply@wj-wellness.com'}>`,
-      to,
-      subject,
-      text: text || '',
-      html
-    };
-    try {
-      const info = await transporter.sendMail(mailOptions);
-      console.log(`[mailer] Email successfully sent to ${to}: ${info.messageId}`);
-      return { success: true, messageId: info.messageId, live: true };
-    } catch (err) {
-      console.error(`[mailer] Failed to send email to ${to}:`, err.message);
       return { success: false, error: err.message, live: false };
     }
   }
