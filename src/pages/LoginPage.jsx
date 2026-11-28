@@ -1,103 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Leaf, Mail, LockKeyhole, Eye, EyeOff, CircleAlert, ArrowRight, ShieldCheck, RotateCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Leaf, Mail, LockKeyhole, Eye, EyeOff, CircleAlert, ArrowRight, ShieldCheck } from 'lucide-react';
 import { ThemeToggle } from '../context/ThemeContext';
-
-function generateRandomCode(length = 5) {
-  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 
 export function LoginPage({ onLogin, notify }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [captchaCode, setCaptchaCode] = useState(() => generateRandomCode(5));
-  const [captchaInput, setCaptchaInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const canvasRef = useRef(null);
-
-  const refreshCaptcha = () => {
-    setCaptchaCode(generateRandomCode(5));
-    setCaptchaInput('');
-    setError('');
-  };
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Background gradient
-    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    grad.addColorStop(0, '#edf5ef');
-    grad.addColorStop(1, '#dfeee2');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Decorative noise lines
-    const lineColors = ['#b8d8be', '#9fc7a7', '#d0b986'];
-    for (let i = 0; i < 4; i++) {
-      ctx.strokeStyle = lineColors[i % lineColors.length];
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(Math.random() * 20, Math.random() * 40);
-      ctx.bezierCurveTo(
-        canvas.width * 0.3, Math.random() * 40,
-        canvas.width * 0.7, Math.random() * 40,
-        canvas.width, Math.random() * 40
-      );
-      ctx.stroke();
-    }
-
-    // Noise dots
-    for (let i = 0; i < 24; i++) {
-      ctx.fillStyle = '#7a9f84';
-      ctx.beginPath();
-      ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Characters with slight rotation
-    const charColors = ['#14382e', '#1c5037', '#7a5a22', '#1a4933', '#0e2b1f'];
-    const startX = 16;
-    const charSpacing = (canvas.width - 32) / captchaCode.length;
-    ctx.font = 'bold 23px monospace';
-    ctx.textBaseline = 'middle';
-
-    for (let i = 0; i < captchaCode.length; i++) {
-      const char = captchaCode[i];
-      const x = startX + i * charSpacing;
-      const y = canvas.height / 2 + (Math.random() * 4 - 2);
-      const angle = (Math.random() * 24 - 12) * (Math.PI / 180);
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(angle);
-      ctx.fillStyle = charColors[i % charColors.length];
-      ctx.fillText(char, 0, 0);
-      ctx.restore();
-    }
-  }, [captchaCode]);
 
   const submit = async (event) => {
     event.preventDefault();
     setError('');
-
-    // Verify CAPTCHA
-    if (captchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
-      const msg = 'Security code does not match. Please enter the new code shown.';
-      setError(msg);
-      notify(msg, 'error');
-      refreshCaptcha();
-      return;
-    }
-
     setLoading(true);
     try {
       await onLogin(email, password);
@@ -105,7 +19,6 @@ export function LoginPage({ onLogin, notify }) {
       const msg = err.message || 'Incorrect email or password. Please try again.';
       setError(msg);
       notify(msg, 'error');
-      refreshCaptcha();
     } finally {
       setLoading(false);
     }
@@ -287,84 +200,13 @@ export function LoginPage({ onLogin, notify }) {
               </button>
             </div>
 
-            {/* SECURITY VERIFICATION CAPTCHA */}
-            <div style={{ marginTop: '16px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label className="field-label" style={{ margin: 0, fontSize: '0.88rem' }}>
-                  Security Verification (CAPTCHA)
-                </label>
-                <button
-                  type="button"
-                  onClick={refreshCaptcha}
-                  title="Generate new security code"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#286a48',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    padding: '2px 4px'
-                  }}
-                >
-                  <RotateCw size={13} />
-                  <span>New code</span>
-                </button>
-              </div>
-
-              <div className="captcha-row" style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%' }}>
-                <div style={{
-                  background: '#f1f8f3',
-                  border: '1px solid #c9dece',
-                  borderRadius: '10px',
-                  padding: '3px 8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)',
-                  flexShrink: 0
-                }}>
-                  <canvas
-                    ref={canvasRef}
-                    width={130}
-                    height={40}
-                    style={{ borderRadius: '6px', display: 'block' }}
-                  />
-                </div>
-                <input
-                  type="text"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
-                  placeholder="Enter code"
-                  required
-                  maxLength={5}
-                  autoComplete="off"
-                  style={{
-                    height: '48px',
-                    border: '1px solid #d4ded7',
-                    borderRadius: '10px',
-                    padding: '0 14px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    minWidth: 0,
-                    flex: 1,
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-            </div>
-
             {error && (
-              <div className="login-error-alert">
+              <div className="login-error-alert" style={{ marginTop: '14px' }}>
                 <CircleAlert size={20} style={{ flexShrink: 0 }} />
                 <span>{error}</span>
               </div>
             )}
-            <button className="primary-button login-submit" type="submit" disabled={loading}>
+            <button className="primary-button login-submit" type="submit" disabled={loading} style={{ marginTop: '16px' }}>
               {loading ? 'Signing in...' : 'Sign in to workspace'} <ArrowRight size={19} />
             </button>
           </form>
